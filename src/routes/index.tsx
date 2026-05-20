@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Phone, MapPin, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import heroImage from "@/assets/hero-caes.png";
+import logoApae from "@/assets/logo-apae.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -46,10 +47,13 @@ function LandingPage() {
       >
         {/* Header */}
         <header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
-          <div className="text-foreground">
-            <div className="text-xs font-medium uppercase tracking-[0.2em] opacity-80">APAE</div>
-            <div className="text-lg font-bold leading-tight">CAES</div>
-          </div>
+          <Link to="/" className="flex items-center gap-3" aria-label="Página inicial">
+            <img
+              src={logoApae}
+              alt="APAE Santa Maria de Jetibá-ES"
+              className="h-12 w-auto"
+            />
+          </Link>
 
           <nav className="hidden items-center gap-8 md:flex">
             {nav.map((n) =>
@@ -128,10 +132,13 @@ function LandingPage() {
             Inclusão e cuidado caminham juntos
           </h2>
           <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
-            O Centro de Atendimento Especializado em Saúde da APAE de Santa Maria de Jetibá-ES é
-            referência regional no cuidado de pessoas com deficiência intelectual e múltipla.
-            Reunimos profissionais qualificados em um ambiente acolhedor para promover autonomia,
-            dignidade e qualidade de vida.
+            O Centro de Atendimento Especializado em Saúde — CAES, vinculado à APAE de Santa Maria
+            de Jetibá-ES, é referência no atendimento multidisciplinar a pessoas com deficiência.
+          </p>
+          <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
+            Oferecemos atendimento clínico, terapêutico e social às pessoas com deficiência
+            intelectual, múltipla e transtorno do espectro autista, valorizando suas potencialidades
+            e garantindo seus direitos.
           </p>
         </div>
       </section>
@@ -155,16 +162,16 @@ function Footer() {
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div>
-            <div className="mb-3 flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-xs font-bold">
-                APAE
+            <Link to="/" className="mb-3 inline-flex items-center gap-3" aria-label="Página inicial">
+              <div className="rounded-xl bg-white p-2">
+                <img src={logoApae} alt="APAE Santa Maria de Jetibá-ES" className="h-12 w-auto" />
               </div>
               <div>
                 <div className="text-lg font-extrabold leading-tight">CAES</div>
                 <div className="text-xs opacity-70">APAE — Santa Maria de Jetibá-ES</div>
               </div>
-            </div>
-            <p className="text-sm leading-relaxed opacity-75">
+            </Link>
+            <p className="mt-3 text-sm leading-relaxed opacity-75">
               Centro de Atendimento Especializado em Saúde, comprometido com o cuidado humanizado.
             </p>
           </div>
