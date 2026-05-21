@@ -210,81 +210,120 @@ function CalendarApp() {
 
         {/* Main */}
         <main className="min-w-0 flex-1 overflow-auto p-4">
-          <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Button size="sm" variant="outline" onClick={() => setCursor(new Date())}>
                 Hoje
               </Button>
-              <Button size="icon" variant="ghost"
-                onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}>
+              <Button size="icon" variant="ghost" onClick={() => setCursor(shiftCursor(cursor, view, -1))}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button size="icon" variant="ghost"
-                onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}>
+              <Button size="icon" variant="ghost" onClick={() => setCursor(shiftCursor(cursor, view, 1))}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
-              <h2 className="ml-2 text-xl font-bold">
-                {MONTHS[cursor.getMonth()]} {cursor.getFullYear()}
-              </h2>
+              <h2 className="ml-2 text-xl font-bold">{headerLabel(cursor, view)}</h2>
             </div>
-            <Button onClick={() => setShowCreateEvt({ date: fmtDate(new Date()) })}>
-              <Plus className="h-4 w-4" /> Evento
-            </Button>
-          </div>
-
-          {/* Month grid */}
-          <div className="overflow-hidden rounded-lg border border-border bg-card">
-            <div className="grid grid-cols-7 border-b border-border bg-muted/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {WEEKDAYS.map((w) => (
-                <div key={w} className="px-2 py-2 text-center">{w}</div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 grid-rows-6">
-              {monthDays.map((d) => {
-                const key = fmtDate(d);
-                const inMonth = d.getMonth() === cursor.getMonth();
-                const isToday = key === fmtDate(new Date());
-                const dayEvts = eventsByDay[key] ?? [];
-                return (
+            <div className="flex items-center gap-2">
+              <div className="flex rounded-md border border-border bg-card p-0.5">
+                {(["month", "week", "day"] as const).map((v) => (
                   <button
-                    key={key}
-                    onClick={() => setShowCreateEvt({ date: key })}
-                    className={`group relative min-h-[110px] border-b border-r border-border p-1.5 text-left transition hover:bg-accent/40 ${
-                      inMonth ? "" : "bg-muted/30 text-muted-foreground"
+                    key={v}
+                    onClick={() => setView(v)}
+                    className={`rounded px-3 py-1 text-xs font-semibold ${
+                      view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"
                     }`}
                   >
-                    <div className={`mb-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
-                      isToday ? "bg-primary text-primary-foreground" : ""
-                    }`}>
-                      {d.getDate()}
-                    </div>
-                    <div className="space-y-1">
-                      {dayEvts.slice(0, 3).map((e) => {
-                        const c = calById[e.calendarId];
-                        return (
-                          <div
-                            key={e.id}
-                            className="truncate rounded px-1.5 py-0.5 text-[11px] font-medium text-white"
-                            style={{ backgroundColor: c?.color ?? "#64748b" }}
-                            title={e.title}
-                          >
-                            {e.startTime ? `${e.startTime} ` : ""}{e.title}
-                          </div>
-                        );
-                      })}
-                      {dayEvts.length > 3 && (
-                        <div className="text-[11px] text-muted-foreground">
-                          +{dayEvts.length - 3} mais
-                        </div>
-                      )}
-                    </div>
+                    {v === "month" ? "Mês" : v === "week" ? "Semana" : "Dia"}
                   </button>
-                );
-              })}
+                ))}
+              </div>
+              {view !== "month" && (
+                <div className="flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1">
+                  <button
+                    aria-label="Diminuir zoom"
+                    className="px-1 text-muted-foreground hover:text-foreground"
+                    onClick={() => setHourHeight((h) => Math.max(24, h - 12))}
+                  >−</button>
+                  <span className="w-14 text-center text-xs">{hourHeight}px/h</span>
+                  <button
+                    aria-label="Aumentar zoom"
+                    className="px-1 text-muted-foreground hover:text-foreground"
+                    onClick={() => setHourHeight((h) => Math.min(160, h + 12))}
+                  >+</button>
+                </div>
+              )}
+              <Button onClick={() => setShowCreateEvt({ date: fmtDate(new Date()) })}>
+                <Plus className="h-4 w-4" /> Evento
+              </Button>
             </div>
           </div>
+
+          {view === "month" && (
+            <div className="overflow-hidden rounded-lg border border-border bg-card">
+              <div className="grid grid-cols-7 border-b border-border bg-muted/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {WEEKDAYS.map((w) => (
+                  <div key={w} className="px-2 py-2 text-center">{w}</div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 grid-rows-6">
+                {monthDays.map((d) => {
+                  const key = fmtDate(d);
+                  const inMonth = d.getMonth() === cursor.getMonth();
+                  const isToday = key === fmtDate(new Date());
+                  const dayEvts = eventsByDay[key] ?? [];
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setShowCreateEvt({ date: key })}
+                      className={`group relative min-h-[110px] border-b border-r border-border p-1.5 text-left transition hover:bg-accent/40 ${
+                        inMonth ? "" : "bg-muted/30 text-muted-foreground"
+                      }`}
+                    >
+                      <div className={`mb-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
+                        isToday ? "bg-primary text-primary-foreground" : ""
+                      }`}>
+                        {d.getDate()}
+                      </div>
+                      <div className="space-y-1">
+                        {dayEvts.slice(0, 3).map((e) => {
+                          const c = calById[e.calendarId];
+                          return (
+                            <div
+                              key={e.id}
+                              className="truncate rounded px-1.5 py-0.5 text-[11px] font-medium text-white"
+                              style={{ backgroundColor: c?.color ?? "#64748b" }}
+                              title={e.title}
+                            >
+                              {e.startTime ? `${e.startTime} ` : ""}{e.title}
+                            </div>
+                          );
+                        })}
+                        {dayEvts.length > 3 && (
+                          <div className="text-[11px] text-muted-foreground">
+                            +{dayEvts.length - 3} mais
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {(view === "week" || view === "day") && (
+            <TimeGrid
+              days={view === "week" ? weekDays(cursor) : [cursor]}
+              events={events}
+              calById={calById}
+              visibleCalIds={visibleCalIds}
+              hourHeight={hourHeight}
+              onSlotClick={(date, start, end) => setShowCreateEvt({ date, start, end })}
+            />
+          )}
         </main>
       </div>
+
 
       {/* Create calendar modal */}
       <CreateCalendarDialog
