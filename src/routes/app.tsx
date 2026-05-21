@@ -721,3 +721,132 @@ function MasterDialog({ open, onClose }: { open: boolean; onClose: () => void })
     </Dialog>
   );
 }
+
+// ---------- Time grid (week / day view) ----------
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+
+function TimeGrid({
+  days, events, calById, visibleCalIds, hourHeight, onSlotClick,
+}: {
+  days: Date[];
+  events: CalendarEvent[];
+  calById: Record<string, Calendar>;
+  visibleCalIds: Set<string>;
+  hourHeight: number;
+  onSlotClick: (date: string, start: string, end: string) => void;
+}) {
+  const todayKey = fmtDate(new Date());
+  const totalHeight = hourHeight * 24;
+
+  function handleGridClick(day: Date, e: React.MouseEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    // 15-minute snap
+    const minutes = Math.max(0, Math.min(24 * 60 - 15, Math.round((y / hourHeight) * 60 / 15) * 15));
+    const start = hhmm(minutes);
+    const end = hhmm(Math.min(24 * 60 - 1, minutes + 60));
+    onSlotClick(fmtDate(day), start, end);
+  }
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-border bg-card">
+      {/* Day header */}
+      <div
+        className="grid border-b border-border bg-muted/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+        style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(0, 1fr))` }}
+      >
+        <div />
+        {days.map((d) => {
+          const isToday = fmtDate(d) === todayKey;
+          return (
+            <div key={fmtDate(d)} className="px-2 py-2 text-center">
+              <div>{WEEKDAYS[d.getDay()]}</div>
+              <div className={`mx-auto mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full text-sm ${
+                isToday ? "bg-primary text-primary-foreground" : "text-foreground"
+              }`}>
+                {d.getDate()}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Scrollable body */}
+      <div className="max-h-[70vh] overflow-y-auto">
+        <div
+          className="relative grid"
+          style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(0, 1fr))` }}
+        >
+          {/* Hours column */}
+          <div className="relative" style={{ height: totalHeight }}>
+            {HOURS.map((h) => (
+              <div
+                key={h}
+                className="absolute left-0 right-0 -translate-y-1/2 pr-2 text-right text-[11px] text-muted-foreground"
+                style={{ top: h * hourHeight }}
+              >
+                {h === 0 ? "" : `${String(h).padStart(2, "0")}:00`}
+              </div>
+            ))}
+          </div>
+
+          {/* Day columns */}
+          {days.map((day) => {
+            const key = fmtDate(day);
+            const dayEvts = events.filter(
+              (e) => e.date === key && visibleCalIds.has(e.calendarId),
+            );
+            return (
+              <div
+                key={key}
+                onClick={(e) => handleGridClick(day, e)}
+                className="relative cursor-pointer border-l border-border"
+                style={{ height: totalHeight }}
+              >
+                {/* hour lines */}
+                {HOURS.map((h) => (
+                  <div
+                    key={h}
+                    className="absolute left-0 right-0 border-t border-border/60"
+                    style={{ top: h * hourHeight }}
+                  />
+                ))}
+                {/* half-hour subtle lines */}
+                {HOURS.map((h) => (
+                  <div
+                    key={`half-${h}`}
+                    className="absolute left-0 right-0 border-t border-dashed border-border/30"
+                    style={{ top: h * hourHeight + hourHeight / 2 }}
+                  />
+                ))}
+                {/* events */}
+                {dayEvts.map((ev) => {
+                  const sm = minutesFromHHMM(ev.startTime ?? "09:00");
+                  const em = Math.max(sm + 15, minutesFromHHMM(ev.endTime ?? ev.startTime ?? "10:00"));
+                  const top = (sm / 60) * hourHeight;
+                  const height = ((em - sm) / 60) * hourHeight;
+                  const color = calById[ev.calendarId]?.color ?? "#64748b";
+                  return (
+                    <div
+                      key={ev.id}
+                      onClick={(e) => e.stopPropagation()}
+                      title={`${ev.startTime ?? ""}–${ev.endTime ?? ""} ${ev.title}`}
+                      className="absolute left-1 right-1 overflow-hidden rounded px-1.5 py-1 text-[11px] font-medium text-white shadow"
+                      style={{ top, height, backgroundColor: color }}
+                    >
+                      <div className="truncate">{ev.startTime ?? ""} {ev.title}</div>
+                      {height > 32 && ev.description && (
+                        <div className="truncate text-[10px] opacity-90">{ev.description}</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
