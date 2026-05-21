@@ -26,9 +26,8 @@ const PALETTE = [
   "#14B8A6", "#A855F7",
 ];
 
-export function defaultCalendars(login: string): Calendar[] {
+export function defaultCalendars(_login: string): Calendar[] {
   return [
-    { id: crypto.randomUUID(), name: login, color: "#4285F4", visible: true, group: "personal" },
     { id: crypto.randomUUID(), name: "Particular", color: "#F97316", visible: true, group: "personal" },
     { id: crypto.randomUUID(), name: "Equipe", color: "#16A34A", visible: true, group: "team" },
   ];
