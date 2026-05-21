@@ -382,6 +382,8 @@ function CalendarApp() {
       <CreateEventDialog
         open={!!showCreateEvt}
         date={showCreateEvt?.date ?? fmtDate(new Date())}
+        initialStart={showCreateEvt?.start}
+        initialEnd={showCreateEvt?.end}
         calendars={calendars}
         onClose={() => setShowCreateEvt(null)}
         onCreate={(e) => setEvents((es) => [...es, e])}
