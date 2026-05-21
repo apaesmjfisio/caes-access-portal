@@ -57,6 +57,8 @@ function buildMonthGrid(year: number, month: number): Date[] {
 }
 
 // ---------- component ----------
+type ViewMode = "month" | "week" | "day";
+
 function CalendarApp() {
   const navigate = useNavigate();
   const [session, setSessionState] = useState<Session | null>(null);
@@ -65,8 +67,10 @@ function CalendarApp() {
   const [cursor, setCursor] = useState(() => new Date());
   const [search, setSearch] = useState("");
   const [showCreateCal, setShowCreateCal] = useState(false);
-  const [showCreateEvt, setShowCreateEvt] = useState<{ date: string } | null>(null);
+  const [showCreateEvt, setShowCreateEvt] = useState<{ date: string; start?: string; end?: string } | null>(null);
   const [showMaster, setShowMaster] = useState(false);
+  const [view, setView] = useState<ViewMode>("month");
+  const [hourHeight, setHourHeight] = useState(48); // px per hour (zoom)
 
   // hydrate session client-side
   useEffect(() => {
@@ -76,9 +80,14 @@ function CalendarApp() {
       return;
     }
     setSessionState(s);
-    setCalendars(loadCalendars(s.login));
+    // Migration: drop auto-seeded calendar whose name matches the login.
+    const raw = loadCalendars(s.login);
+    const cleaned = raw.filter((c) => c.name.toLowerCase() !== s.login.toLowerCase());
+    if (cleaned.length !== raw.length) saveCalendars(s.login, cleaned);
+    setCalendars(cleaned);
     setEvents(loadEvents(s.login));
   }, [navigate]);
+
 
   useEffect(() => {
     if (session) saveCalendars(session.login, calendars);
