@@ -559,17 +559,18 @@ function CreateCalendarDialog({
 }
 
 function CreateEventDialog({
-  open, date, calendars, onClose, onCreate,
+  open, date, initialStart, initialEnd, calendars, onClose, onCreate,
 }: {
-  open: boolean; date: string; calendars: Calendar[];
+  open: boolean; date: string; initialStart?: string; initialEnd?: string;
+  calendars: Calendar[];
   onClose: () => void; onCreate: (e: CalendarEvent) => void;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [calendarId, setCalendarId] = useState<string>(calendars[0]?.id ?? "");
   const [d, setD] = useState(date);
-  const [start, setStart] = useState("09:00");
-  const [end, setEnd] = useState("10:00");
+  const [start, setStart] = useState(initialStart ?? "09:00");
+  const [end, setEnd] = useState(initialEnd ?? "10:00");
 
   useEffect(() => {
     if (open) {
@@ -577,10 +578,11 @@ function CreateEventDialog({
       setDescription("");
       setCalendarId(calendars[0]?.id ?? "");
       setD(date);
-      setStart("09:00");
-      setEnd("10:00");
+      setStart(initialStart ?? "09:00");
+      setEnd(initialEnd ?? "10:00");
     }
-  }, [open, date, calendars]);
+  }, [open, date, calendars, initialStart, initialEnd]);
+
 
   const selected = calendars.find((c) => c.id === calendarId);
 
