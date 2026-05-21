@@ -56,6 +56,51 @@ function buildMonthGrid(year: number, month: number): Date[] {
   return days;
 }
 
+function weekDays(cursor: Date): Date[] {
+  const start = new Date(cursor);
+  start.setDate(cursor.getDate() - cursor.getDay()); // Sunday
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    return d;
+  });
+}
+
+function shiftCursor(cursor: Date, view: "month" | "week" | "day", dir: number): Date {
+  const d = new Date(cursor);
+  if (view === "month") d.setMonth(d.getMonth() + dir);
+  else if (view === "week") d.setDate(d.getDate() + 7 * dir);
+  else d.setDate(d.getDate() + dir);
+  return d;
+}
+
+function headerLabel(cursor: Date, view: "month" | "week" | "day"): string {
+  if (view === "month") return `${MONTHS[cursor.getMonth()]} ${cursor.getFullYear()}`;
+  if (view === "day") {
+    return `${WEEKDAYS[cursor.getDay()]}, ${cursor.getDate()} ${MONTHS[cursor.getMonth()]} ${cursor.getFullYear()}`;
+  }
+  const ws = weekDays(cursor);
+  const a = ws[0]; const b = ws[6];
+  if (a.getMonth() === b.getMonth()) {
+    return `${a.getDate()}–${b.getDate()} ${MONTHS[a.getMonth()]} ${a.getFullYear()}`;
+  }
+  return `${a.getDate()} ${MONTHS[a.getMonth()]} – ${b.getDate()} ${MONTHS[b.getMonth()]} ${b.getFullYear()}`;
+}
+
+function minutesFromHHMM(s?: string): number {
+  if (!s) return 0;
+  const [h, m] = s.split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
+function hhmm(totalMinutes: number): string {
+  const t = Math.max(0, Math.min(24 * 60 - 1, totalMinutes));
+  const h = Math.floor(t / 60);
+  const m = t % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+
 // ---------- component ----------
 type ViewMode = "month" | "week" | "day";
 
