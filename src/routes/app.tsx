@@ -56,7 +56,54 @@ function buildMonthGrid(year: number, month: number): Date[] {
   return days;
 }
 
+function weekDays(cursor: Date): Date[] {
+  const start = new Date(cursor);
+  start.setDate(cursor.getDate() - cursor.getDay()); // Sunday
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    return d;
+  });
+}
+
+function shiftCursor(cursor: Date, view: "month" | "week" | "day", dir: number): Date {
+  const d = new Date(cursor);
+  if (view === "month") d.setMonth(d.getMonth() + dir);
+  else if (view === "week") d.setDate(d.getDate() + 7 * dir);
+  else d.setDate(d.getDate() + dir);
+  return d;
+}
+
+function headerLabel(cursor: Date, view: "month" | "week" | "day"): string {
+  if (view === "month") return `${MONTHS[cursor.getMonth()]} ${cursor.getFullYear()}`;
+  if (view === "day") {
+    return `${WEEKDAYS[cursor.getDay()]}, ${cursor.getDate()} ${MONTHS[cursor.getMonth()]} ${cursor.getFullYear()}`;
+  }
+  const ws = weekDays(cursor);
+  const a = ws[0]; const b = ws[6];
+  if (a.getMonth() === b.getMonth()) {
+    return `${a.getDate()}–${b.getDate()} ${MONTHS[a.getMonth()]} ${a.getFullYear()}`;
+  }
+  return `${a.getDate()} ${MONTHS[a.getMonth()]} – ${b.getDate()} ${MONTHS[b.getMonth()]} ${b.getFullYear()}`;
+}
+
+function minutesFromHHMM(s?: string): number {
+  if (!s) return 0;
+  const [h, m] = s.split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
+function hhmm(totalMinutes: number): string {
+  const t = Math.max(0, Math.min(24 * 60 - 1, totalMinutes));
+  const h = Math.floor(t / 60);
+  const m = t % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+
 // ---------- component ----------
+type ViewMode = "month" | "week" | "day";
+
 function CalendarApp() {
   const navigate = useNavigate();
   const [session, setSessionState] = useState<Session | null>(null);
@@ -65,8 +112,10 @@ function CalendarApp() {
   const [cursor, setCursor] = useState(() => new Date());
   const [search, setSearch] = useState("");
   const [showCreateCal, setShowCreateCal] = useState(false);
-  const [showCreateEvt, setShowCreateEvt] = useState<{ date: string } | null>(null);
+  const [showCreateEvt, setShowCreateEvt] = useState<{ date: string; start?: string; end?: string } | null>(null);
   const [showMaster, setShowMaster] = useState(false);
+  const [view, setView] = useState<ViewMode>("month");
+  const [hourHeight, setHourHeight] = useState(48); // px per hour (zoom)
 
   // hydrate session client-side
   useEffect(() => {
@@ -76,9 +125,14 @@ function CalendarApp() {
       return;
     }
     setSessionState(s);
-    setCalendars(loadCalendars(s.login));
+    // Migration: drop auto-seeded calendar whose name matches the login.
+    const raw = loadCalendars(s.login);
+    const cleaned = raw.filter((c) => c.name.toLowerCase() !== s.login.toLowerCase());
+    if (cleaned.length !== raw.length) saveCalendars(s.login, cleaned);
+    setCalendars(cleaned);
     setEvents(loadEvents(s.login));
   }, [navigate]);
+
 
   useEffect(() => {
     if (session) saveCalendars(session.login, calendars);
@@ -201,81 +255,120 @@ function CalendarApp() {
 
         {/* Main */}
         <main className="min-w-0 flex-1 overflow-auto p-4">
-          <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Button size="sm" variant="outline" onClick={() => setCursor(new Date())}>
                 Hoje
               </Button>
-              <Button size="icon" variant="ghost"
-                onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}>
+              <Button size="icon" variant="ghost" onClick={() => setCursor(shiftCursor(cursor, view, -1))}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button size="icon" variant="ghost"
-                onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}>
+              <Button size="icon" variant="ghost" onClick={() => setCursor(shiftCursor(cursor, view, 1))}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
-              <h2 className="ml-2 text-xl font-bold">
-                {MONTHS[cursor.getMonth()]} {cursor.getFullYear()}
-              </h2>
+              <h2 className="ml-2 text-xl font-bold">{headerLabel(cursor, view)}</h2>
             </div>
-            <Button onClick={() => setShowCreateEvt({ date: fmtDate(new Date()) })}>
-              <Plus className="h-4 w-4" /> Evento
-            </Button>
-          </div>
-
-          {/* Month grid */}
-          <div className="overflow-hidden rounded-lg border border-border bg-card">
-            <div className="grid grid-cols-7 border-b border-border bg-muted/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {WEEKDAYS.map((w) => (
-                <div key={w} className="px-2 py-2 text-center">{w}</div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 grid-rows-6">
-              {monthDays.map((d) => {
-                const key = fmtDate(d);
-                const inMonth = d.getMonth() === cursor.getMonth();
-                const isToday = key === fmtDate(new Date());
-                const dayEvts = eventsByDay[key] ?? [];
-                return (
+            <div className="flex items-center gap-2">
+              <div className="flex rounded-md border border-border bg-card p-0.5">
+                {(["month", "week", "day"] as const).map((v) => (
                   <button
-                    key={key}
-                    onClick={() => setShowCreateEvt({ date: key })}
-                    className={`group relative min-h-[110px] border-b border-r border-border p-1.5 text-left transition hover:bg-accent/40 ${
-                      inMonth ? "" : "bg-muted/30 text-muted-foreground"
+                    key={v}
+                    onClick={() => setView(v)}
+                    className={`rounded px-3 py-1 text-xs font-semibold ${
+                      view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"
                     }`}
                   >
-                    <div className={`mb-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
-                      isToday ? "bg-primary text-primary-foreground" : ""
-                    }`}>
-                      {d.getDate()}
-                    </div>
-                    <div className="space-y-1">
-                      {dayEvts.slice(0, 3).map((e) => {
-                        const c = calById[e.calendarId];
-                        return (
-                          <div
-                            key={e.id}
-                            className="truncate rounded px-1.5 py-0.5 text-[11px] font-medium text-white"
-                            style={{ backgroundColor: c?.color ?? "#64748b" }}
-                            title={e.title}
-                          >
-                            {e.startTime ? `${e.startTime} ` : ""}{e.title}
-                          </div>
-                        );
-                      })}
-                      {dayEvts.length > 3 && (
-                        <div className="text-[11px] text-muted-foreground">
-                          +{dayEvts.length - 3} mais
-                        </div>
-                      )}
-                    </div>
+                    {v === "month" ? "Mês" : v === "week" ? "Semana" : "Dia"}
                   </button>
-                );
-              })}
+                ))}
+              </div>
+              {view !== "month" && (
+                <div className="flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1">
+                  <button
+                    aria-label="Diminuir zoom"
+                    className="px-1 text-muted-foreground hover:text-foreground"
+                    onClick={() => setHourHeight((h) => Math.max(24, h - 12))}
+                  >−</button>
+                  <span className="w-14 text-center text-xs">{hourHeight}px/h</span>
+                  <button
+                    aria-label="Aumentar zoom"
+                    className="px-1 text-muted-foreground hover:text-foreground"
+                    onClick={() => setHourHeight((h) => Math.min(160, h + 12))}
+                  >+</button>
+                </div>
+              )}
+              <Button onClick={() => setShowCreateEvt({ date: fmtDate(new Date()) })}>
+                <Plus className="h-4 w-4" /> Evento
+              </Button>
             </div>
           </div>
+
+          {view === "month" && (
+            <div className="overflow-hidden rounded-lg border border-border bg-card">
+              <div className="grid grid-cols-7 border-b border-border bg-muted/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {WEEKDAYS.map((w) => (
+                  <div key={w} className="px-2 py-2 text-center">{w}</div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 grid-rows-6">
+                {monthDays.map((d) => {
+                  const key = fmtDate(d);
+                  const inMonth = d.getMonth() === cursor.getMonth();
+                  const isToday = key === fmtDate(new Date());
+                  const dayEvts = eventsByDay[key] ?? [];
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setShowCreateEvt({ date: key })}
+                      className={`group relative min-h-[110px] border-b border-r border-border p-1.5 text-left transition hover:bg-accent/40 ${
+                        inMonth ? "" : "bg-muted/30 text-muted-foreground"
+                      }`}
+                    >
+                      <div className={`mb-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
+                        isToday ? "bg-primary text-primary-foreground" : ""
+                      }`}>
+                        {d.getDate()}
+                      </div>
+                      <div className="space-y-1">
+                        {dayEvts.slice(0, 3).map((e) => {
+                          const c = calById[e.calendarId];
+                          return (
+                            <div
+                              key={e.id}
+                              className="truncate rounded px-1.5 py-0.5 text-[11px] font-medium text-white"
+                              style={{ backgroundColor: c?.color ?? "#64748b" }}
+                              title={e.title}
+                            >
+                              {e.startTime ? `${e.startTime} ` : ""}{e.title}
+                            </div>
+                          );
+                        })}
+                        {dayEvts.length > 3 && (
+                          <div className="text-[11px] text-muted-foreground">
+                            +{dayEvts.length - 3} mais
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {(view === "week" || view === "day") && (
+            <TimeGrid
+              days={view === "week" ? weekDays(cursor) : [cursor]}
+              events={events}
+              calById={calById}
+              visibleCalIds={visibleCalIds}
+              hourHeight={hourHeight}
+              onSlotClick={(date, start, end) => setShowCreateEvt({ date, start, end })}
+            />
+          )}
         </main>
       </div>
+
 
       {/* Create calendar modal */}
       <CreateCalendarDialog
@@ -289,6 +382,8 @@ function CalendarApp() {
       <CreateEventDialog
         open={!!showCreateEvt}
         date={showCreateEvt?.date ?? fmtDate(new Date())}
+        initialStart={showCreateEvt?.start}
+        initialEnd={showCreateEvt?.end}
         calendars={calendars}
         onClose={() => setShowCreateEvt(null)}
         onCreate={(e) => setEvents((es) => [...es, e])}
@@ -466,17 +561,18 @@ function CreateCalendarDialog({
 }
 
 function CreateEventDialog({
-  open, date, calendars, onClose, onCreate,
+  open, date, initialStart, initialEnd, calendars, onClose, onCreate,
 }: {
-  open: boolean; date: string; calendars: Calendar[];
+  open: boolean; date: string; initialStart?: string; initialEnd?: string;
+  calendars: Calendar[];
   onClose: () => void; onCreate: (e: CalendarEvent) => void;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [calendarId, setCalendarId] = useState<string>(calendars[0]?.id ?? "");
   const [d, setD] = useState(date);
-  const [start, setStart] = useState("09:00");
-  const [end, setEnd] = useState("10:00");
+  const [start, setStart] = useState(initialStart ?? "09:00");
+  const [end, setEnd] = useState(initialEnd ?? "10:00");
 
   useEffect(() => {
     if (open) {
@@ -484,10 +580,11 @@ function CreateEventDialog({
       setDescription("");
       setCalendarId(calendars[0]?.id ?? "");
       setD(date);
-      setStart("09:00");
-      setEnd("10:00");
+      setStart(initialStart ?? "09:00");
+      setEnd(initialEnd ?? "10:00");
     }
-  }, [open, date, calendars]);
+  }, [open, date, calendars, initialStart, initialEnd]);
+
 
   const selected = calendars.find((c) => c.id === calendarId);
 
@@ -624,3 +721,132 @@ function MasterDialog({ open, onClose }: { open: boolean; onClose: () => void })
     </Dialog>
   );
 }
+
+// ---------- Time grid (week / day view) ----------
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+
+function TimeGrid({
+  days, events, calById, visibleCalIds, hourHeight, onSlotClick,
+}: {
+  days: Date[];
+  events: CalendarEvent[];
+  calById: Record<string, Calendar>;
+  visibleCalIds: Set<string>;
+  hourHeight: number;
+  onSlotClick: (date: string, start: string, end: string) => void;
+}) {
+  const todayKey = fmtDate(new Date());
+  const totalHeight = hourHeight * 24;
+
+  function handleGridClick(day: Date, e: React.MouseEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    // 15-minute snap
+    const minutes = Math.max(0, Math.min(24 * 60 - 15, Math.round((y / hourHeight) * 60 / 15) * 15));
+    const start = hhmm(minutes);
+    const end = hhmm(Math.min(24 * 60 - 1, minutes + 60));
+    onSlotClick(fmtDate(day), start, end);
+  }
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-border bg-card">
+      {/* Day header */}
+      <div
+        className="grid border-b border-border bg-muted/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+        style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(0, 1fr))` }}
+      >
+        <div />
+        {days.map((d) => {
+          const isToday = fmtDate(d) === todayKey;
+          return (
+            <div key={fmtDate(d)} className="px-2 py-2 text-center">
+              <div>{WEEKDAYS[d.getDay()]}</div>
+              <div className={`mx-auto mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full text-sm ${
+                isToday ? "bg-primary text-primary-foreground" : "text-foreground"
+              }`}>
+                {d.getDate()}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Scrollable body */}
+      <div className="max-h-[70vh] overflow-y-auto">
+        <div
+          className="relative grid"
+          style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(0, 1fr))` }}
+        >
+          {/* Hours column */}
+          <div className="relative" style={{ height: totalHeight }}>
+            {HOURS.map((h) => (
+              <div
+                key={h}
+                className="absolute left-0 right-0 -translate-y-1/2 pr-2 text-right text-[11px] text-muted-foreground"
+                style={{ top: h * hourHeight }}
+              >
+                {h === 0 ? "" : `${String(h).padStart(2, "0")}:00`}
+              </div>
+            ))}
+          </div>
+
+          {/* Day columns */}
+          {days.map((day) => {
+            const key = fmtDate(day);
+            const dayEvts = events.filter(
+              (e) => e.date === key && visibleCalIds.has(e.calendarId),
+            );
+            return (
+              <div
+                key={key}
+                onClick={(e) => handleGridClick(day, e)}
+                className="relative cursor-pointer border-l border-border"
+                style={{ height: totalHeight }}
+              >
+                {/* hour lines */}
+                {HOURS.map((h) => (
+                  <div
+                    key={h}
+                    className="absolute left-0 right-0 border-t border-border/60"
+                    style={{ top: h * hourHeight }}
+                  />
+                ))}
+                {/* half-hour subtle lines */}
+                {HOURS.map((h) => (
+                  <div
+                    key={`half-${h}`}
+                    className="absolute left-0 right-0 border-t border-dashed border-border/30"
+                    style={{ top: h * hourHeight + hourHeight / 2 }}
+                  />
+                ))}
+                {/* events */}
+                {dayEvts.map((ev) => {
+                  const sm = minutesFromHHMM(ev.startTime ?? "09:00");
+                  const em = Math.max(sm + 15, minutesFromHHMM(ev.endTime ?? ev.startTime ?? "10:00"));
+                  const top = (sm / 60) * hourHeight;
+                  const height = ((em - sm) / 60) * hourHeight;
+                  const color = calById[ev.calendarId]?.color ?? "#64748b";
+                  return (
+                    <div
+                      key={ev.id}
+                      onClick={(e) => e.stopPropagation()}
+                      title={`${ev.startTime ?? ""}–${ev.endTime ?? ""} ${ev.title}`}
+                      className="absolute left-1 right-1 overflow-hidden rounded px-1.5 py-1 text-[11px] font-medium text-white shadow"
+                      style={{ top, height, backgroundColor: color }}
+                    >
+                      <div className="truncate">{ev.startTime ?? ""} {ev.title}</div>
+                      {height > 32 && ev.description && (
+                        <div className="truncate text-[10px] opacity-90">{ev.description}</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
