@@ -504,8 +504,9 @@ function CreateCalendarDialog({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Novo calendário</DialogTitle>
+          <DialogTitle>Nova agenda</DialogTitle>
           <DialogDescription>Defina nome, cor e categoria.</DialogDescription>
+
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
