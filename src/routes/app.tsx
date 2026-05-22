@@ -222,12 +222,23 @@ function CalendarApp() {
       <div className="flex min-h-0 flex-1">
         {/* Sidebar */}
         <aside className="hidden w-72 shrink-0 flex-col border-r border-border bg-sidebar p-4 md:flex">
-          <Button
-            onClick={() => setShowCreateCal(true)}
-            className="mb-4 w-full justify-start rounded-full"
-          >
-            <Plus className="h-4 w-4" /> Criar calendário
-          </Button>
+          <div className="mb-4 flex items-center gap-2">
+            <Button
+              onClick={() => setShowCreateCal(true)}
+              className="flex-1 justify-start rounded-full"
+            >
+              <Plus className="h-4 w-4" /> Criar Agenda
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full"
+              aria-label="Configurações da agenda"
+              onClick={() => navigate({ to: "/configuracoes" })}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          </div>
 
           {/* mini calendar */}
           <MiniCalendar cursor={cursor} onPick={(d) => setCursor(d)} />
@@ -237,13 +248,13 @@ function CalendarApp() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar calendários"
+              placeholder="Buscar agendas"
               className="w-full bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>
 
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
-            <CalGroup title="Meus calendários" cals={grouped.personal} onToggle={toggleCal} onDelete={deleteCal} />
+            <CalGroup title="Minhas Agendas" cals={grouped.personal} onToggle={toggleCal} onDelete={deleteCal} />
             {grouped.team.length > 0 && (
               <CalGroup title="Equipe" cals={grouped.team} onToggle={toggleCal} onDelete={deleteCal} />
             )}
@@ -252,6 +263,7 @@ function CalendarApp() {
             )}
           </div>
         </aside>
+
 
         {/* Main */}
         <main className="min-w-0 flex-1 overflow-auto p-4">
