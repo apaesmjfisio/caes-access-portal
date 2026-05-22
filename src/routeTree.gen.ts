@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TriagemRouteImport } from './routes/triagem'
 import { Route as ServicosRouteImport } from './routes/servicos'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -30,6 +31,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppRoute = AppRouteImport.update({
   id: '/app',
   path: '/app',
@@ -44,6 +50,7 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/login': typeof LoginRoute
   '/servicos': typeof ServicosRoute
   '/triagem': typeof TriagemRoute
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/login': typeof LoginRoute
   '/servicos': typeof ServicosRoute
   '/triagem': typeof TriagemRoute
@@ -59,21 +67,36 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/login': typeof LoginRoute
   '/servicos': typeof ServicosRoute
   '/triagem': typeof TriagemRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/app' | '/login' | '/servicos' | '/triagem'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/configuracoes'
+    | '/login'
+    | '/servicos'
+    | '/triagem'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/app' | '/login' | '/servicos' | '/triagem'
-  id: '__root__' | '/' | '/app' | '/login' | '/servicos' | '/triagem'
+  to: '/' | '/app' | '/configuracoes' | '/login' | '/servicos' | '/triagem'
+  id:
+    | '__root__'
+    | '/'
+    | '/app'
+    | '/configuracoes'
+    | '/login'
+    | '/servicos'
+    | '/triagem'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRoute
+  ConfiguracoesRoute: typeof ConfiguracoesRoute
   LoginRoute: typeof LoginRoute
   ServicosRoute: typeof ServicosRoute
   TriagemRoute: typeof TriagemRoute
@@ -102,6 +125,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/configuracoes': {
+      id: '/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof ConfiguracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app': {
       id: '/app'
       path: '/app'
@@ -122,6 +152,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRoute,
+  ConfiguracoesRoute: ConfiguracoesRoute,
   LoginRoute: LoginRoute,
   ServicosRoute: ServicosRoute,
   TriagemRoute: TriagemRoute,
@@ -129,3 +160,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
