@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TriagemRouteImport } from './routes/triagem'
+import { Route as SistemaRouteImport } from './routes/sistema'
 import { Route as ServicosRouteImport } from './routes/servicos'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
@@ -19,6 +20,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const TriagemRoute = TriagemRouteImport.update({
   id: '/triagem',
   path: '/triagem',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SistemaRoute = SistemaRouteImport.update({
+  id: '/sistema',
+  path: '/sistema',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ServicosRoute = ServicosRouteImport.update({
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes': typeof ConfiguracoesRoute
   '/login': typeof LoginRoute
   '/servicos': typeof ServicosRoute
+  '/sistema': typeof SistemaRoute
   '/triagem': typeof TriagemRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/configuracoes': typeof ConfiguracoesRoute
   '/login': typeof LoginRoute
   '/servicos': typeof ServicosRoute
+  '/sistema': typeof SistemaRoute
   '/triagem': typeof TriagemRoute
 }
 export interface FileRoutesById {
@@ -70,6 +78,7 @@ export interface FileRoutesById {
   '/configuracoes': typeof ConfiguracoesRoute
   '/login': typeof LoginRoute
   '/servicos': typeof ServicosRoute
+  '/sistema': typeof SistemaRoute
   '/triagem': typeof TriagemRoute
 }
 export interface FileRouteTypes {
@@ -80,9 +89,17 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/login'
     | '/servicos'
+    | '/sistema'
     | '/triagem'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/app' | '/configuracoes' | '/login' | '/servicos' | '/triagem'
+  to:
+    | '/'
+    | '/app'
+    | '/configuracoes'
+    | '/login'
+    | '/servicos'
+    | '/sistema'
+    | '/triagem'
   id:
     | '__root__'
     | '/'
@@ -90,6 +107,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/login'
     | '/servicos'
+    | '/sistema'
     | '/triagem'
   fileRoutesById: FileRoutesById
 }
@@ -99,6 +117,7 @@ export interface RootRouteChildren {
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   LoginRoute: typeof LoginRoute
   ServicosRoute: typeof ServicosRoute
+  SistemaRoute: typeof SistemaRoute
   TriagemRoute: typeof TriagemRoute
 }
 
@@ -109,6 +128,13 @@ declare module '@tanstack/react-router' {
       path: '/triagem'
       fullPath: '/triagem'
       preLoaderRoute: typeof TriagemRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sistema': {
+      id: '/sistema'
+      path: '/sistema'
+      fullPath: '/sistema'
+      preLoaderRoute: typeof SistemaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/servicos': {
@@ -155,6 +181,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConfiguracoesRoute: ConfiguracoesRoute,
   LoginRoute: LoginRoute,
   ServicosRoute: ServicosRoute,
+  SistemaRoute: SistemaRoute,
   TriagemRoute: TriagemRoute,
 }
 export const routeTree = rootRouteImport
