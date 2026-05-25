@@ -8,8 +8,12 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ChevronLeft, ChevronRight, Plus, LogOut, Settings, Trash2, Search,
+  ChevronLeft, ChevronRight, Plus, LogOut, Settings, Trash2, Search, Bell,
+  Sliders, UserRound, Stethoscope,
 } from "lucide-react";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
 import logoApae from "@/assets/logo-apae.png";
 import {
   getSession, clearSession, getMaster, setMaster, type Session,
@@ -18,6 +22,7 @@ import {
   loadCalendars, saveCalendars, loadEvents, saveEvents,
   suggestColor, PALETTE, type Calendar, type CalendarEvent,
 } from "@/lib/calendar-store";
+import { loadSettings } from "@/lib/agenda-settings";
 
 export const Route = createFileRoute("/app")({
   head: () => ({ meta: [{ title: "Agenda — CAES" }] }),
@@ -131,6 +136,11 @@ function CalendarApp() {
     if (cleaned.length !== raw.length) saveCalendars(s.login, cleaned);
     setCalendars(cleaned);
     setEvents(loadEvents(s.login));
+    // Adopt saved default view from agenda settings.
+    try {
+      const cfg = loadSettings(s.login, "default");
+      if (cfg.defaultView) setView(cfg.defaultView);
+    } catch { /* noop */ }
   }, [navigate]);
 
 
@@ -213,6 +223,15 @@ function CalendarApp() {
               <Settings className="h-4 w-4" /> Master
             </Button>
           )}
+          <Button
+            size="icon"
+            variant="outline"
+            aria-label="Configurações do sistema"
+            title="Configurações do sistema"
+            onClick={() => navigate({ to: "/sistema" })}
+          >
+            <Sliders className="h-4 w-4" />
+          </Button>
           <Button size="sm" variant="ghost" onClick={logout}>
             <LogOut className="h-4 w-4" /> Sair
           </Button>
@@ -294,6 +313,8 @@ function CalendarApp() {
                   </button>
                 ))}
               </div>
+              <BirthdayBell />
+
               {view !== "month" && (
                 <div className="flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1">
                   <button
@@ -862,4 +883,78 @@ function TimeGrid({
     </div>
   );
 }
+
+// ---------- Birthday bell ----------
+function BirthdayBell() {
+  // Placeholder lists — cadastro real será integrado depois.
+  const users: { name: string; date: string }[] = [];
+  const professionals: { name: string; date: string }[] = [];
+  const total = users.length + professionals.length;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          size="icon"
+          variant="outline"
+          aria-label="Aniversariantes do dia"
+          title="Aniversariantes do dia"
+          className="relative"
+        >
+          <Bell className="h-4 w-4" />
+          {total > 0 && (
+            <span className="absolute -right-1 -top-1 grid h-4 min-w-[16px] place-items-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+              {total}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 p-0">
+        <div className="border-b border-border px-3 py-2 text-sm font-bold">
+          Aniversariantes de hoje
+        </div>
+        <div className="max-h-80 space-y-3 overflow-y-auto p-3">
+          <div>
+            <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              <UserRound className="h-3.5 w-3.5" /> Usuários
+            </div>
+            {users.length === 0 ? (
+              <div className="rounded-md border border-dashed border-border px-2 py-2 text-xs text-muted-foreground">
+                Nenhum usuário aniversariante hoje.
+              </div>
+            ) : (
+              <ul className="space-y-1 text-sm">
+                {users.map((u) => (
+                  <li key={u.name} className="flex justify-between">
+                    <span>{u.name}</span>
+                    <span className="text-xs text-muted-foreground">{u.date}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div>
+            <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              <Stethoscope className="h-3.5 w-3.5" /> Profissionais
+            </div>
+            {professionals.length === 0 ? (
+              <div className="rounded-md border border-dashed border-border px-2 py-2 text-xs text-muted-foreground">
+                Nenhum profissional aniversariante hoje.
+              </div>
+            ) : (
+              <ul className="space-y-1 text-sm">
+                {professionals.map((p) => (
+                  <li key={p.name} className="flex justify-between">
+                    <span>{p.name}</span>
+                    <span className="text-xs text-muted-foreground">{p.date}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 
