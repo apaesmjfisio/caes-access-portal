@@ -223,6 +223,15 @@ function CalendarApp() {
               <Settings className="h-4 w-4" /> Master
             </Button>
           )}
+          <Button
+            size="icon"
+            variant="outline"
+            aria-label="Configurações do sistema"
+            title="Configurações do sistema"
+            onClick={() => navigate({ to: "/sistema" })}
+          >
+            <Sliders className="h-4 w-4" />
+          </Button>
           <Button size="sm" variant="ghost" onClick={logout}>
             <LogOut className="h-4 w-4" /> Sair
           </Button>
