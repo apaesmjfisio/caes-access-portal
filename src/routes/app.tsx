@@ -136,6 +136,11 @@ function CalendarApp() {
     if (cleaned.length !== raw.length) saveCalendars(s.login, cleaned);
     setCalendars(cleaned);
     setEvents(loadEvents(s.login));
+    // Adopt saved default view from agenda settings.
+    try {
+      const cfg = loadSettings(s.login, "default");
+      if (cfg.defaultView) setView(cfg.defaultView);
+    } catch { /* noop */ }
   }, [navigate]);
 
 
