@@ -313,6 +313,8 @@ function CalendarApp() {
                   </button>
                 ))}
               </div>
+              <BirthdayBell />
+
               {view !== "month" && (
                 <div className="flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1">
                   <button
