@@ -92,14 +92,7 @@ export interface FileRouteTypes {
     | '/sistema'
     | '/triagem'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/app'
-    | '/configuracoes'
-    | '/login'
-    | '/servicos'
-    | '/sistema'
-    | '/triagem'
+  to: '/' | '/app' | '/configuracoes' | '/login' | '/servicos' | '/sistema' | '/triagem'
   id:
     | '__root__'
     | '/'
