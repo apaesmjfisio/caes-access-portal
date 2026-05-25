@@ -8,8 +8,12 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ChevronLeft, ChevronRight, Plus, LogOut, Settings, Trash2, Search,
+  ChevronLeft, ChevronRight, Plus, LogOut, Settings, Trash2, Search, Bell,
+  Sliders, UserRound, Stethoscope,
 } from "lucide-react";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
 import logoApae from "@/assets/logo-apae.png";
 import {
   getSession, clearSession, getMaster, setMaster, type Session,
@@ -18,6 +22,7 @@ import {
   loadCalendars, saveCalendars, loadEvents, saveEvents,
   suggestColor, PALETTE, type Calendar, type CalendarEvent,
 } from "@/lib/calendar-store";
+import { loadSettings } from "@/lib/agenda-settings";
 
 export const Route = createFileRoute("/app")({
   head: () => ({ meta: [{ title: "Agenda — CAES" }] }),

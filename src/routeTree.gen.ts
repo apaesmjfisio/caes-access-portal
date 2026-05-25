@@ -92,7 +92,14 @@ export interface FileRouteTypes {
     | '/sistema'
     | '/triagem'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/app' | '/configuracoes' | '/login' | '/servicos' | '/sistema' | '/triagem'
+  to:
+    | '/'
+    | '/app'
+    | '/configuracoes'
+    | '/login'
+    | '/servicos'
+    | '/sistema'
+    | '/triagem'
   id:
     | '__root__'
     | '/'
@@ -180,13 +187,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
