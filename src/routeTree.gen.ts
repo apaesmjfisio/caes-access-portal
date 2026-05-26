@@ -20,49 +20,31 @@ import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 
 const TriagemRoute = TriagemRouteImport.update({
-  id: '/triagem',
-  path: '/triagem',
-  getParentRoute: () => rootRouteImport,
+  id: '/triagem', path: '/triagem', getParentRoute: () => rootRouteImport,
 } as any)
 const SistemaRoute = SistemaRouteImport.update({
-  id: '/sistema',
-  path: '/sistema',
-  getParentRoute: () => rootRouteImport,
+  id: '/sistema', path: '/sistema', getParentRoute: () => rootRouteImport,
 } as any)
 const ServicosRoute = ServicosRouteImport.update({
-  id: '/servicos',
-  path: '/servicos',
-  getParentRoute: () => rootRouteImport,
+  id: '/servicos', path: '/servicos', getParentRoute: () => rootRouteImport,
 } as any)
 const ProfissionaisRoute = ProfissionaisRouteImport.update({
-  id: '/profissionais',
-  path: '/profissionais',
-  getParentRoute: () => rootRouteImport,
+  id: '/profissionais', path: '/profissionais', getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
+  id: '/login', path: '/login', getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
+  id: '/dashboard', path: '/dashboard', getParentRoute: () => rootRouteImport,
 } as any)
 const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
-  id: '/configuracoes',
-  path: '/configuracoes',
-  getParentRoute: () => rootRouteImport,
+  id: '/configuracoes', path: '/configuracoes', getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
-  id: '/app',
-  path: '/app',
-  getParentRoute: () => rootRouteImport,
+  id: '/app', path: '/app', getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
+  id: '/', path: '/', getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -102,37 +84,15 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/app'
-    | '/configuracoes'
-    | '/dashboard'
-    | '/login'
-    | '/profissionais'
-    | '/servicos'
-    | '/sistema'
-    | '/triagem'
+    | '/' | '/app' | '/configuracoes' | '/dashboard' | '/login'
+    | '/profissionais' | '/servicos' | '/sistema' | '/triagem'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
-    | '/app'
-    | '/configuracoes'
-    | '/dashboard'
-    | '/login'
-    | '/profissionais'
-    | '/servicos'
-    | '/sistema'
-    | '/triagem'
+    | '/' | '/app' | '/configuracoes' | '/dashboard' | '/login'
+    | '/profissionais' | '/servicos' | '/sistema' | '/triagem'
   id:
-    | '__root__'
-    | '/'
-    | '/app'
-    | '/configuracoes'
-    | '/dashboard'
-    | '/login'
-    | '/profissionais'
-    | '/servicos'
-    | '/sistema'
-    | '/triagem'
+    | '__root__' | '/' | '/app' | '/configuracoes' | '/dashboard' | '/login'
+    | '/profissionais' | '/servicos' | '/sistema' | '/triagem'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -149,69 +109,15 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/triagem': {
-      id: '/triagem'
-      path: '/triagem'
-      fullPath: '/triagem'
-      preLoaderRoute: typeof TriagemRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sistema': {
-      id: '/sistema'
-      path: '/sistema'
-      fullPath: '/sistema'
-      preLoaderRoute: typeof SistemaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/servicos': {
-      id: '/servicos'
-      path: '/servicos'
-      fullPath: '/servicos'
-      preLoaderRoute: typeof ServicosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profissionais': {
-      id: '/profissionais'
-      path: '/profissionais'
-      fullPath: '/profissionais'
-      preLoaderRoute: typeof ProfissionaisRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/configuracoes': {
-      id: '/configuracoes'
-      path: '/configuracoes'
-      fullPath: '/configuracoes'
-      preLoaderRoute: typeof ConfiguracoesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app': {
-      id: '/app'
-      path: '/app'
-      fullPath: '/app'
-      preLoaderRoute: typeof AppRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+    '/triagem': { id: '/triagem'; path: '/triagem'; fullPath: '/triagem'; preLoaderRoute: typeof TriagemRouteImport; parentRoute: typeof rootRouteImport }
+    '/sistema': { id: '/sistema'; path: '/sistema'; fullPath: '/sistema'; preLoaderRoute: typeof SistemaRouteImport; parentRoute: typeof rootRouteImport }
+    '/servicos': { id: '/servicos'; path: '/servicos'; fullPath: '/servicos'; preLoaderRoute: typeof ServicosRouteImport; parentRoute: typeof rootRouteImport }
+    '/profissionais': { id: '/profissionais'; path: '/profissionais'; fullPath: '/profissionais'; preLoaderRoute: typeof ProfissionaisRouteImport; parentRoute: typeof rootRouteImport }
+    '/login': { id: '/login'; path: '/login'; fullPath: '/login'; preLoaderRoute: typeof LoginRouteImport; parentRoute: typeof rootRouteImport }
+    '/dashboard': { id: '/dashboard'; path: '/dashboard'; fullPath: '/dashboard'; preLoaderRoute: typeof DashboardRouteImport; parentRoute: typeof rootRouteImport }
+    '/configuracoes': { id: '/configuracoes'; path: '/configuracoes'; fullPath: '/configuracoes'; preLoaderRoute: typeof ConfiguracoesRouteImport; parentRoute: typeof rootRouteImport }
+    '/app': { id: '/app'; path: '/app'; fullPath: '/app'; preLoaderRoute: typeof AppRouteImport; parentRoute: typeof rootRouteImport }
+    '/': { id: '/'; path: '/'; fullPath: '/'; preLoaderRoute: typeof IndexRouteImport; parentRoute: typeof rootRouteImport }
   }
 }
 

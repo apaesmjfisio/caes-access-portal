@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft, Save, Phone, MessageSquare, Mail, Cake, Send, Calendar as CalIcon,
-  Image as ImageIcon, Settings as Gear,
+  Image as ImageIcon, Settings as Gear, UserRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -90,6 +90,12 @@ function SystemPage() {
             }`}
           >
             <Phone className="h-4 w-4" /> Contato
+          </button>
+          <button
+            onClick={() => navigate({ to: "/profissionais" })}
+            className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold hover:bg-accent"
+          >
+            <UserRound className="h-4 w-4" /> Profissional
           </button>
           <div className="mt-3 px-2 text-[11px] text-muted-foreground">
             Outras configurações premium serão adicionadas aqui.

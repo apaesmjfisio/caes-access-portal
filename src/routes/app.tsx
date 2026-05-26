@@ -9,7 +9,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   ChevronLeft, ChevronRight, Plus, LogOut, Settings, Trash2, Search, Bell,
-  Sliders, UserRound, Stethoscope,
+  Sliders, UserRound, Stethoscope, BarChart3,
 } from "lucide-react";
 import {
   Popover, PopoverContent, PopoverTrigger,
@@ -231,6 +231,15 @@ function CalendarApp() {
             onClick={() => navigate({ to: "/sistema" })}
           >
             <Sliders className="h-4 w-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="outline"
+            aria-label="Dashboard"
+            title="Dashboard"
+            onClick={() => navigate({ to: "/dashboard" })}
+          >
+            <BarChart3 className="h-4 w-4" />
           </Button>
           <Button size="sm" variant="ghost" onClick={logout}>
             <LogOut className="h-4 w-4" /> Sair
