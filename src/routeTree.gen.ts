@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TriagemRouteImport } from './routes/triagem'
 import { Route as SistemaRouteImport } from './routes/sistema'
 import { Route as ServicosRouteImport } from './routes/servicos'
+import { Route as ProfissionaisRouteImport } from './routes/profissionais'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
@@ -32,9 +34,19 @@ const ServicosRoute = ServicosRouteImport.update({
   path: '/servicos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfissionaisRoute = ProfissionaisRouteImport.update({
+  id: '/profissionais',
+  path: '/profissionais',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
@@ -57,7 +69,9 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/profissionais': typeof ProfissionaisRoute
   '/servicos': typeof ServicosRoute
   '/sistema': typeof SistemaRoute
   '/triagem': typeof TriagemRoute
@@ -66,7 +80,9 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/profissionais': typeof ProfissionaisRoute
   '/servicos': typeof ServicosRoute
   '/sistema': typeof SistemaRoute
   '/triagem': typeof TriagemRoute
@@ -76,7 +92,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/profissionais': typeof ProfissionaisRoute
   '/servicos': typeof ServicosRoute
   '/sistema': typeof SistemaRoute
   '/triagem': typeof TriagemRoute
@@ -87,7 +105,9 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/configuracoes'
+    | '/dashboard'
     | '/login'
+    | '/profissionais'
     | '/servicos'
     | '/sistema'
     | '/triagem'
@@ -96,7 +116,9 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/configuracoes'
+    | '/dashboard'
     | '/login'
+    | '/profissionais'
     | '/servicos'
     | '/sistema'
     | '/triagem'
@@ -105,7 +127,9 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/configuracoes'
+    | '/dashboard'
     | '/login'
+    | '/profissionais'
     | '/servicos'
     | '/sistema'
     | '/triagem'
@@ -115,7 +139,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
+  DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
+  ProfissionaisRoute: typeof ProfissionaisRoute
   ServicosRoute: typeof ServicosRoute
   SistemaRoute: typeof SistemaRoute
   TriagemRoute: typeof TriagemRoute
@@ -144,11 +170,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServicosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profissionais': {
+      id: '/profissionais'
+      path: '/profissionais'
+      fullPath: '/profissionais'
+      preLoaderRoute: typeof ProfissionaisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/configuracoes': {
@@ -179,7 +219,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
+  DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
+  ProfissionaisRoute: ProfissionaisRoute,
   ServicosRoute: ServicosRoute,
   SistemaRoute: SistemaRoute,
   TriagemRoute: TriagemRoute,
@@ -187,3 +229,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
