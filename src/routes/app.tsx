@@ -1021,8 +1021,11 @@ function TimeGrid({
                 {dayEvts.map((ev) => {
                   const sm = minutesFromHHMM(ev.startTime ?? "09:00");
                   const em = Math.max(sm + 15, minutesFromHHMM(ev.endTime ?? ev.startTime ?? "10:00"));
-                  const top = (sm / 60) * hourHeight;
-                  const height = ((em - sm) / 60) * hourHeight;
+                  if (em <= startMinute || sm >= endMinute) return null;
+                  const clippedStart = Math.max(sm, startMinute);
+                  const clippedEnd = Math.min(em, endMinute);
+                  const top = ((clippedStart - startMinute) / 60) * hourHeight;
+                  const height = ((clippedEnd - clippedStart) / 60) * hourHeight;
                   const color = calById[ev.calendarId]?.color ?? "#64748b";
                   return (
                     <div
