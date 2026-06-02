@@ -422,6 +422,8 @@ function CalendarApp() {
               calById={calById}
               visibleCalIds={visibleCalIds}
               hourHeight={hourHeight}
+              slotMinutes={agendaCfg?.intervalDisplay ?? 60}
+              defaultDuration={agendaCfg?.defaultDuration ?? 60}
               onSlotClick={(date, start, end) => setShowCreateEvt({ date, start, end })}
             />
           )}
