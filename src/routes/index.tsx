@@ -65,7 +65,7 @@ function LandingPage() {
         id="inicio"
         className="relative min-h-[100vh] w-full overflow-hidden"
         style={{
-          backgroundImage: `linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0.55)), url(${heroImage})`,
+          backgroundImage: `linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.25)), url(${heroImage})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
