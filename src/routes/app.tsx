@@ -556,6 +556,8 @@ function CalendarApp() {
         initialStart={showCreateEvt?.start}
         initialEnd={showCreateEvt?.end}
         calendars={calendars}
+        defaultAgendaConfig={agendaCfg}
+        settingsByCalendarId={settingsByCalendarId}
         onClose={() => setShowCreateEvt(null)}
         onCreate={(e) => setEvents((es) => [...es, e])}
       />
@@ -733,10 +735,12 @@ function CreateCalendarDialog({
 }
 
 function CreateEventDialog({
-  open, date, initialStart, initialEnd, calendars, onClose, onCreate,
+  open, date, initialStart, initialEnd, calendars, defaultAgendaConfig, settingsByCalendarId, onClose, onCreate,
 }: {
   open: boolean; date: string; initialStart?: string; initialEnd?: string;
   calendars: Calendar[];
+  defaultAgendaConfig: AgendaSettings | null;
+  settingsByCalendarId: Record<string, AgendaSettings>;
   onClose: () => void; onCreate: (e: CalendarEvent) => void;
 }) {
   const [title, setTitle] = useState("");
@@ -759,6 +763,15 @@ function CreateEventDialog({
 
 
   const selected = calendars.find((c) => c.id === calendarId);
+  const effectiveCfg = settingsByCalendarId[calendarId] ?? defaultAgendaConfig;
+  const selectedDate = d ? new Date(`${d}T00:00:00`) : null;
+  const selectedDayCfg = selectedDate && effectiveCfg ? effectiveCfg.days[dayKeyOf(selectedDate)] : null;
+  const startMinute = minutesFromHHMM(start);
+  const endMinute = minutesFromHHMM(end);
+  const workStart = minutesFromHHMM(selectedDayCfg?.workStart || "00:00");
+  const workEnd = minutesFromHHMM(selectedDayCfg?.workEnd || "23:59");
+  const validAgendaDay = !effectiveCfg || !!selectedDayCfg?.enabled;
+  const validAgendaTime = !effectiveCfg || (endMinute > startMinute && startMinute >= workStart && endMinute <= workEnd);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -816,11 +829,16 @@ function CreateEventDialog({
               />
             </div>
           )}
+          {(!validAgendaDay || !validAgendaTime) && (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+              Este dia ou horário está fora das configurações salvas para a agenda selecionada.
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
           <Button
-            disabled={!title.trim() || !calendarId}
+            disabled={!title.trim() || !calendarId || !validAgendaDay || !validAgendaTime}
             onClick={() => {
               onCreate({
                 id: crypto.randomUUID(),
