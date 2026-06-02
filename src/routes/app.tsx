@@ -310,6 +310,15 @@ function CalendarApp() {
     navigate({ to: "/login" });
   }
 
+  function openQuickEvent() {
+    const snap = Math.max(5, activeSlotMinutes || 60);
+    const day = nextEnabledDate(new Date(), activeAgendaConfigs);
+    const range = workingRangeForDayConfigs(day, activeAgendaConfigs) ?? activeWorkingRange;
+    const startMinute = Math.max(range.startMinute, ceilToStep(range.startMinute, snap));
+    const endMinute = Math.min(range.endMinute, startMinute + Math.max(5, agendaCfg?.defaultDuration ?? 60));
+    setShowCreateEvt({ date: fmtDate(day), start: hhmm(startMinute), end: hhmm(Math.max(startMinute + 5, endMinute)) });
+  }
+
   if (!session) return null;
 
   return (
@@ -449,7 +458,7 @@ function CalendarApp() {
                   >+</button>
                 </div>
               )}
-              <Button onClick={() => setShowCreateEvt({ date: fmtDate(new Date()) })}>
+              <Button onClick={openQuickEvent}>
                 <Plus className="h-4 w-4" /> Evento
               </Button>
             </div>
@@ -457,13 +466,19 @@ function CalendarApp() {
 
           {view === "month" && (
             <div className="overflow-hidden rounded-lg border border-border bg-card">
-              <div className="grid grid-cols-7 border-b border-border bg-muted/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {WEEKDAYS.map((w) => (
-                  <div key={w} className="px-2 py-2 text-center">{w}</div>
+              <div
+                className="grid border-b border-border bg-muted/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                style={{ gridTemplateColumns: `repeat(${visibleWeekdayIndexes.length || 1}, minmax(0, 1fr))` }}
+              >
+                {visibleWeekdayIndexes.map((dayIndex) => (
+                  <div key={dayIndex} className="px-2 py-2 text-center">{WEEKDAYS[dayIndex]}</div>
                 ))}
               </div>
-              <div className="grid grid-cols-7 grid-rows-6">
-                {monthDays.map((d) => {
+              <div
+                className="grid grid-rows-6"
+                style={{ gridTemplateColumns: `repeat(${visibleWeekdayIndexes.length || 1}, minmax(0, 1fr))` }}
+              >
+                {visibleMonthDays.map((d) => {
                   const key = fmtDate(d);
                   const inMonth = d.getMonth() === cursor.getMonth();
                   const isToday = key === fmtDate(new Date());
@@ -510,13 +525,15 @@ function CalendarApp() {
 
           {(view === "week" || view === "day") && (
             <TimeGrid
-              days={view === "week" ? weekDays(cursor) : [cursor]}
+              days={visibleTimeGridDays}
               events={events}
               calById={calById}
               visibleCalIds={visibleCalIds}
               hourHeight={hourHeight}
-              slotMinutes={agendaCfg?.intervalDisplay ?? 60}
+              slotMinutes={activeSlotMinutes}
               defaultDuration={agendaCfg?.defaultDuration ?? 60}
+              workingRange={activeWorkingRange}
+              activeAgendaConfigs={activeAgendaConfigs}
               onSlotClick={(date, start, end) => setShowCreateEvt({ date, start, end })}
             />
           )}
