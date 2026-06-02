@@ -22,7 +22,7 @@ import {
   loadCalendars, saveCalendars, loadEvents, saveEvents,
   suggestColor, PALETTE, type Calendar, type CalendarEvent,
 } from "@/lib/calendar-store";
-import { loadSettings } from "@/lib/agenda-settings";
+import { DAY_KEYS, loadSettings, type AgendaSettings, type DayKey } from "@/lib/agenda-settings";
 
 export const Route = createFileRoute("/app")({
   head: () => ({ meta: [{ title: "Agenda — CAES" }] }),
@@ -31,6 +31,7 @@ export const Route = createFileRoute("/app")({
 
 // ---------- helpers ----------
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const DAY_INDEX_KEYS: DayKey[] = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
 const MONTHS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
@@ -103,6 +104,44 @@ function hhmm(totalMinutes: number): string {
   const h = Math.floor(t / 60);
   const m = t % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function ceilToStep(value: number, step: number): number {
+  return Math.ceil(value / step) * step;
+}
+
+function floorToStep(value: number, step: number): number {
+  return Math.floor(value / step) * step;
+}
+
+function dayKeyOf(d: Date): DayKey {
+  return DAY_INDEX_KEYS[d.getDay()];
+}
+
+function enabledByAnyConfig(d: Date, configs: AgendaSettings[]): boolean {
+  if (configs.length === 0) return true;
+  return configs.some((cfg) => cfg.days[dayKeyOf(d)]?.enabled);
+}
+
+function workingRangeForConfigs(configs: AgendaSettings[], snap: number) {
+  let start = 24 * 60;
+  let end = 0;
+  for (const cfg of configs) {
+    for (const key of DAY_KEYS) {
+      const day = cfg.days[key];
+      if (!day?.enabled) continue;
+      const s = minutesFromHHMM(day.workStart || "00:00");
+      const e = minutesFromHHMM(day.workEnd || "23:59");
+      if (e <= s) continue;
+      start = Math.min(start, s);
+      end = Math.max(end, e);
+    }
+  }
+  if (start >= end) return { startMinute: 0, endMinute: 24 * 60 };
+  return {
+    startMinute: Math.max(0, floorToStep(start, snap)),
+    endMinute: Math.min(24 * 60, ceilToStep(end, snap)),
+  };
 }
 
 
