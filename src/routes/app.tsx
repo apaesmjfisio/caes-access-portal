@@ -878,14 +878,16 @@ function TimeGrid({
                     style={{ top: h * hourHeight }}
                   />
                 ))}
-                {/* half-hour subtle lines */}
-                {HOURS.map((h) => (
-                  <div
-                    key={`half-${h}`}
-                    className="absolute left-0 right-0 border-t border-dashed border-border/30"
-                    style={{ top: h * hourHeight + hourHeight / 2 }}
-                  />
-                ))}
+                {/* subdivision lines based on intervalo de exibição */}
+                {subs > 0 && HOURS.map((h) =>
+                  Array.from({ length: subs }, (_, i) => i + 1).map((i) => (
+                    <div
+                      key={`sub-${h}-${i}`}
+                      className="absolute left-0 right-0 border-t border-dashed border-border/30"
+                      style={{ top: h * hourHeight + (hourHeight * i) / (subs + 1) }}
+                    />
+                  )),
+                )}
                 {/* events */}
                 {dayEvts.map((ev) => {
                   const sm = minutesFromHHMM(ev.startTime ?? "09:00");
