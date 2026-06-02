@@ -121,6 +121,7 @@ function CalendarApp() {
   const [showMaster, setShowMaster] = useState(false);
   const [view, setView] = useState<ViewMode>("month");
   const [hourHeight, setHourHeight] = useState(48); // px per hour (zoom)
+  const [agendaCfg, setAgendaCfg] = useState<ReturnType<typeof loadSettings> | null>(null);
 
   // hydrate session client-side
   useEffect(() => {
@@ -136,11 +137,25 @@ function CalendarApp() {
     if (cleaned.length !== raw.length) saveCalendars(s.login, cleaned);
     setCalendars(cleaned);
     setEvents(loadEvents(s.login));
-    // Adopt saved default view from agenda settings.
-    try {
-      const cfg = loadSettings(s.login, "default");
-      if (cfg.defaultView) setView(cfg.defaultView);
-    } catch { /* noop */ }
+
+    // Adopt saved agenda settings and react to updates / focus.
+    const apply = () => {
+      try {
+        const cfg = loadSettings(s.login, "default");
+        setAgendaCfg(cfg);
+        if (cfg.defaultView) setView(cfg.defaultView);
+      } catch { /* noop */ }
+    };
+    apply();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key && e.key.startsWith(`caes.cal.${s.login}.settings.`)) apply();
+    };
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("focus", apply);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", apply);
+    };
   }, [navigate]);
 
 
@@ -405,6 +420,8 @@ function CalendarApp() {
               calById={calById}
               visibleCalIds={visibleCalIds}
               hourHeight={hourHeight}
+              slotMinutes={agendaCfg?.intervalDisplay ?? 60}
+              defaultDuration={agendaCfg?.defaultDuration ?? 60}
               onSlotClick={(date, start, end) => setShowCreateEvt({ date, start, end })}
             />
           )}
@@ -769,25 +786,30 @@ function MasterDialog({ open, onClose }: { open: boolean; onClose: () => void })
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 function TimeGrid({
-  days, events, calById, visibleCalIds, hourHeight, onSlotClick,
+  days, events, calById, visibleCalIds, hourHeight, slotMinutes, defaultDuration, onSlotClick,
 }: {
   days: Date[];
   events: CalendarEvent[];
   calById: Record<string, Calendar>;
   visibleCalIds: Set<string>;
   hourHeight: number;
+  slotMinutes: number;
+  defaultDuration: number;
   onSlotClick: (date: string, start: string, end: string) => void;
 }) {
   const todayKey = fmtDate(new Date());
   const totalHeight = hourHeight * 24;
+  const snap = Math.max(5, slotMinutes || 60);
+  const dur = Math.max(5, defaultDuration || 60);
+  // subdivision lines per hour (e.g. 60→0, 30→1, 20→2, 15→3, 10→5, 5→11)
+  const subs = Math.max(0, Math.round(60 / snap) - 1);
 
   function handleGridClick(day: Date, e: React.MouseEvent<HTMLDivElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
     const y = e.clientY - rect.top;
-    // 15-minute snap
-    const minutes = Math.max(0, Math.min(24 * 60 - 15, Math.round((y / hourHeight) * 60 / 15) * 15));
+    const minutes = Math.max(0, Math.min(24 * 60 - snap, Math.round((y / hourHeight) * 60 / snap) * snap));
     const start = hhmm(minutes);
-    const end = hhmm(Math.min(24 * 60 - 1, minutes + 60));
+    const end = hhmm(Math.min(24 * 60 - 1, minutes + dur));
     onSlotClick(fmtDate(day), start, end);
   }
 
@@ -854,14 +876,16 @@ function TimeGrid({
                     style={{ top: h * hourHeight }}
                   />
                 ))}
-                {/* half-hour subtle lines */}
-                {HOURS.map((h) => (
-                  <div
-                    key={`half-${h}`}
-                    className="absolute left-0 right-0 border-t border-dashed border-border/30"
-                    style={{ top: h * hourHeight + hourHeight / 2 }}
-                  />
-                ))}
+                {/* subdivision lines based on intervalo de exibição */}
+                {subs > 0 && HOURS.map((h) =>
+                  Array.from({ length: subs }, (_, i) => i + 1).map((i) => (
+                    <div
+                      key={`sub-${h}-${i}`}
+                      className="absolute left-0 right-0 border-t border-dashed border-border/30"
+                      style={{ top: h * hourHeight + (hourHeight * i) / (subs + 1) }}
+                    />
+                  )),
+                )}
                 {/* events */}
                 {dayEvts.map((ev) => {
                   const sm = minutesFromHHMM(ev.startTime ?? "09:00");
