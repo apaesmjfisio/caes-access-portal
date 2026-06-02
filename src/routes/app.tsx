@@ -121,6 +121,9 @@ function CalendarApp() {
   const [showMaster, setShowMaster] = useState(false);
   const [view, setView] = useState<ViewMode>("month");
   const [hourHeight, setHourHeight] = useState(48); // px per hour (zoom)
+  const [agendaCfg, setAgendaCfg] = useState(() => {
+    try { return loadSettings("__bootstrap__", "default"); } catch { return null as any; }
+  });
 
   // hydrate session client-side
   useEffect(() => {
@@ -136,11 +139,25 @@ function CalendarApp() {
     if (cleaned.length !== raw.length) saveCalendars(s.login, cleaned);
     setCalendars(cleaned);
     setEvents(loadEvents(s.login));
-    // Adopt saved default view from agenda settings.
-    try {
-      const cfg = loadSettings(s.login, "default");
-      if (cfg.defaultView) setView(cfg.defaultView);
-    } catch { /* noop */ }
+
+    // Adopt saved agenda settings and react to updates / focus.
+    const apply = () => {
+      try {
+        const cfg = loadSettings(s.login, "default");
+        setAgendaCfg(cfg);
+        if (cfg.defaultView) setView(cfg.defaultView);
+      } catch { /* noop */ }
+    };
+    apply();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key && e.key.startsWith(`caes.cal.${s.login}.settings.`)) apply();
+    };
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("focus", apply);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", apply);
+    };
   }, [navigate]);
 
 
