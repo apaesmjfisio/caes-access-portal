@@ -898,7 +898,8 @@ function MasterDialog({ open, onClose }: { open: boolean; onClose: () => void })
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 function TimeGrid({
-  days, events, calById, visibleCalIds, hourHeight, slotMinutes, defaultDuration, onSlotClick,
+  days, events, calById, visibleCalIds, hourHeight, slotMinutes, defaultDuration,
+  workingRange, activeAgendaConfigs, onSlotClick,
 }: {
   days: Date[];
   events: CalendarEvent[];
@@ -907,22 +908,40 @@ function TimeGrid({
   hourHeight: number;
   slotMinutes: number;
   defaultDuration: number;
+  workingRange: { startMinute: number; endMinute: number };
+  activeAgendaConfigs: AgendaSettings[];
   onSlotClick: (date: string, start: string, end: string) => void;
 }) {
   const todayKey = fmtDate(new Date());
-  const totalHeight = hourHeight * 24;
   const snap = Math.max(5, slotMinutes || 60);
   const dur = Math.max(5, defaultDuration || 60);
+  const startMinute = floorToStep(workingRange.startMinute, snap);
+  const endMinute = Math.max(startMinute + snap, ceilToStep(workingRange.endMinute, snap));
+  const totalHeight = ((endMinute - startMinute) / 60) * hourHeight;
+  const visibleHours = Array.from(
+    { length: Math.floor((endMinute - startMinute) / 60) + 1 },
+    (_, i) => Math.floor(startMinute / 60) + i,
+  ).filter((h) => h * 60 >= startMinute && h * 60 <= endMinute);
   // subdivision lines per hour (e.g. 60→0, 30→1, 20→2, 15→3, 10→5, 5→11)
   const subs = Math.max(0, Math.round(60 / snap) - 1);
 
   function handleGridClick(day: Date, e: React.MouseEvent<HTMLDivElement>) {
+    const dayRange = workingRangeForDayConfigs(day, activeAgendaConfigs) ?? workingRange;
     const rect = e.currentTarget.getBoundingClientRect();
     const y = e.clientY - rect.top;
-    const minutes = Math.max(0, Math.min(24 * 60 - snap, Math.round((y / hourHeight) * 60 / snap) * snap));
+    const rawMinutes = startMinute + Math.round((y / hourHeight) * 60 / snap) * snap;
+    const minutes = Math.max(dayRange.startMinute, Math.min(dayRange.endMinute - snap, rawMinutes));
     const start = hhmm(minutes);
-    const end = hhmm(Math.min(24 * 60 - 1, minutes + dur));
+    const end = hhmm(Math.min(dayRange.endMinute, minutes + dur));
     onSlotClick(fmtDate(day), start, end);
+  }
+
+  if (days.length === 0) {
+    return (
+      <div className="rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+        Nenhum dia habilitado para este período conforme as configurações da agenda.
+      </div>
+    );
   }
 
   return (
@@ -956,13 +975,13 @@ function TimeGrid({
         >
           {/* Hours column */}
           <div className="relative" style={{ height: totalHeight }}>
-            {HOURS.map((h) => (
+            {visibleHours.map((h) => (
               <div
                 key={h}
                 className="absolute left-0 right-0 -translate-y-1/2 pr-2 text-right text-[11px] text-muted-foreground"
-                style={{ top: h * hourHeight }}
+                style={{ top: ((h * 60 - startMinute) / 60) * hourHeight }}
               >
-                {h === 0 ? "" : `${String(h).padStart(2, "0")}:00`}
+                {`${String(h).padStart(2, "0")}:00`}
               </div>
             ))}
           </div>
@@ -981,20 +1000,20 @@ function TimeGrid({
                 style={{ height: totalHeight }}
               >
                 {/* hour lines */}
-                {HOURS.map((h) => (
+                {visibleHours.map((h) => (
                   <div
                     key={h}
                     className="absolute left-0 right-0 border-t border-border/60"
-                    style={{ top: h * hourHeight }}
+                    style={{ top: ((h * 60 - startMinute) / 60) * hourHeight }}
                   />
                 ))}
                 {/* subdivision lines based on intervalo de exibição */}
-                {subs > 0 && HOURS.map((h) =>
+                {subs > 0 && visibleHours.map((h) =>
                   Array.from({ length: subs }, (_, i) => i + 1).map((i) => (
                     <div
                       key={`sub-${h}-${i}`}
                       className="absolute left-0 right-0 border-t border-dashed border-border/30"
-                      style={{ top: h * hourHeight + (hourHeight * i) / (subs + 1) }}
+                      style={{ top: ((h * 60 - startMinute) / 60) * hourHeight + (hourHeight * i) / (subs + 1) }}
                     />
                   )),
                 )}
