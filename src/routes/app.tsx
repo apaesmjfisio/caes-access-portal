@@ -209,6 +209,24 @@ function CalendarApp() {
     () => new Set(calendars.filter((c) => c.visible).map((c) => c.id)),
     [calendars],
   );
+  const settingsByCalendarId = useMemo(() => {
+    if (!session || !agendaCfg) return {} as Record<string, AgendaSettings>;
+    return Object.fromEntries(
+      calendars.map((c) => [c.id, loadSettings(session.login, c.id)]),
+    ) as Record<string, AgendaSettings>;
+  }, [agendaCfg, calendars, session]);
+  const activeAgendaConfigs = useMemo(() => {
+    const visibleSpecific = calendars
+      .filter((c) => c.visible)
+      .map((c) => settingsByCalendarId[c.id])
+      .filter(Boolean);
+    return visibleSpecific.length > 0 ? visibleSpecific : agendaCfg ? [agendaCfg] : [];
+  }, [agendaCfg, calendars, settingsByCalendarId]);
+  const activeSlotMinutes = agendaCfg?.intervalDisplay ?? 60;
+  const activeWorkingRange = useMemo(
+    () => workingRangeForConfigs(activeAgendaConfigs, Math.max(5, activeSlotMinutes || 60)),
+    [activeAgendaConfigs, activeSlotMinutes],
+  );
   const calById = useMemo(
     () => Object.fromEntries(calendars.map((c) => [c.id, c])),
     [calendars],
@@ -231,6 +249,14 @@ function CalendarApp() {
     () => buildMonthGrid(cursor.getFullYear(), cursor.getMonth()),
     [cursor],
   );
+  const visibleMonthDays = useMemo(
+    () => monthDays.filter((d) => enabledByAnyConfig(d, activeAgendaConfigs)),
+    [activeAgendaConfigs, monthDays],
+  );
+  const visibleTimeGridDays = useMemo(() => {
+    const days = view === "week" ? weekDays(cursor) : [cursor];
+    return days.filter((d) => enabledByAnyConfig(d, activeAgendaConfigs));
+  }, [activeAgendaConfigs, cursor, view]);
 
   const eventsByDay = useMemo(() => {
     const map: Record<string, CalendarEvent[]> = {};
