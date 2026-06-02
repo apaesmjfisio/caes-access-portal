@@ -121,9 +121,7 @@ function CalendarApp() {
   const [showMaster, setShowMaster] = useState(false);
   const [view, setView] = useState<ViewMode>("month");
   const [hourHeight, setHourHeight] = useState(48); // px per hour (zoom)
-  const [agendaCfg, setAgendaCfg] = useState(() => {
-    try { return loadSettings("__bootstrap__", "default"); } catch { return null as any; }
-  });
+  const [agendaCfg, setAgendaCfg] = useState<ReturnType<typeof loadSettings> | null>(null);
 
   // hydrate session client-side
   useEffect(() => {
