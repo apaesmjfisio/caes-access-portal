@@ -915,15 +915,13 @@ function TimeGrid({
   const todayKey = fmtDate(new Date());
   const snap = Math.max(5, slotMinutes || 60);
   const dur = Math.max(5, defaultDuration || 60);
-  const startMinute = floorToStep(workingRange.startMinute, snap);
-  const endMinute = Math.max(startMinute + snap, ceilToStep(workingRange.endMinute, snap));
+  const startMinute = workingRange.startMinute;
+  const endMinute = Math.max(startMinute + snap, workingRange.endMinute);
   const totalHeight = ((endMinute - startMinute) / 60) * hourHeight;
-  const visibleHours = Array.from(
-    { length: Math.floor((endMinute - startMinute) / 60) + 1 },
-    (_, i) => Math.floor(startMinute / 60) + i,
-  ).filter((h) => h * 60 >= startMinute && h * 60 <= endMinute);
-  // subdivision lines per hour (e.g. 60→0, 30→1, 20→2, 15→3, 10→5, 5→11)
-  const subs = Math.max(0, Math.round(60 / snap) - 1);
+  const timeMarks = Array.from(
+    { length: Math.floor((endMinute - startMinute) / snap) + 1 },
+    (_, i) => startMinute + i * snap,
+  ).filter((m) => m >= startMinute && m <= endMinute);
 
   function handleGridClick(day: Date, e: React.MouseEvent<HTMLDivElement>) {
     const dayRange = workingRangeForDayConfigs(day, activeAgendaConfigs) ?? workingRange;
@@ -975,13 +973,13 @@ function TimeGrid({
         >
           {/* Hours column */}
           <div className="relative" style={{ height: totalHeight }}>
-            {visibleHours.map((h) => (
+            {timeMarks.map((m) => (
               <div
-                key={h}
+                key={m}
                 className="absolute left-0 right-0 -translate-y-1/2 pr-2 text-right text-[11px] text-muted-foreground"
-                style={{ top: ((h * 60 - startMinute) / 60) * hourHeight }}
+                style={{ top: ((m - startMinute) / 60) * hourHeight }}
               >
-                {`${String(h).padStart(2, "0")}:00`}
+                {hhmm(m)}
               </div>
             ))}
           </div>
@@ -999,24 +997,14 @@ function TimeGrid({
                 className="relative cursor-pointer border-l border-border"
                 style={{ height: totalHeight }}
               >
-                {/* hour lines */}
-                {visibleHours.map((h) => (
+                {/* time lines based on intervalo de exibição */}
+                {timeMarks.map((m) => (
                   <div
-                    key={h}
+                    key={m}
                     className="absolute left-0 right-0 border-t border-border/60"
-                    style={{ top: ((h * 60 - startMinute) / 60) * hourHeight }}
+                    style={{ top: ((m - startMinute) / 60) * hourHeight }}
                   />
                 ))}
-                {/* subdivision lines based on intervalo de exibição */}
-                {subs > 0 && visibleHours.map((h) =>
-                  Array.from({ length: subs }, (_, i) => i + 1).map((i) => (
-                    <div
-                      key={`sub-${h}-${i}`}
-                      className="absolute left-0 right-0 border-t border-dashed border-border/30"
-                      style={{ top: ((h * 60 - startMinute) / 60) * hourHeight + (hourHeight * i) / (subs + 1) }}
-                    />
-                  )),
-                )}
                 {/* events */}
                 {dayEvts.map((ev) => {
                   const sm = minutesFromHHMM(ev.startTime ?? "09:00");
