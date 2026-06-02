@@ -895,8 +895,6 @@ function MasterDialog({ open, onClose }: { open: boolean; onClose: () => void })
 }
 
 // ---------- Time grid (week / day view) ----------
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
-
 function TimeGrid({
   days, events, calById, visibleCalIds, hourHeight, slotMinutes, defaultDuration,
   workingRange, activeAgendaConfigs, onSlotClick,
