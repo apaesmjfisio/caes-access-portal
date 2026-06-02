@@ -141,6 +141,32 @@ function workingRangeForConfigs(configs: AgendaSettings[]) {
   return { startMinute: Math.max(0, start), endMinute: Math.min(24 * 60, end) };
 }
 
+function workingRangeForDayConfigs(d: Date, configs: AgendaSettings[]) {
+  const key = dayKeyOf(d);
+  let start = 24 * 60;
+  let end = 0;
+  for (const cfg of configs) {
+    const day = cfg.days[key];
+    if (!day?.enabled) continue;
+    const s = minutesFromHHMM(day.workStart || "00:00");
+    const e = minutesFromHHMM(day.workEnd || "23:59");
+    if (e <= s) continue;
+    start = Math.min(start, s);
+    end = Math.max(end, e);
+  }
+  if (start >= end) return null;
+  return { startMinute: Math.max(0, start), endMinute: Math.min(24 * 60, end) };
+}
+
+function nextEnabledDate(from: Date, configs: AgendaSettings[]) {
+  const d = new Date(from);
+  for (let i = 0; i < 14; i += 1) {
+    if (enabledByAnyConfig(d, configs)) return d;
+    d.setDate(d.getDate() + 1);
+  }
+  return from;
+}
+
 
 // ---------- component ----------
 type ViewMode = "month" | "week" | "day";
