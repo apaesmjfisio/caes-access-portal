@@ -788,25 +788,30 @@ function MasterDialog({ open, onClose }: { open: boolean; onClose: () => void })
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 function TimeGrid({
-  days, events, calById, visibleCalIds, hourHeight, onSlotClick,
+  days, events, calById, visibleCalIds, hourHeight, slotMinutes, defaultDuration, onSlotClick,
 }: {
   days: Date[];
   events: CalendarEvent[];
   calById: Record<string, Calendar>;
   visibleCalIds: Set<string>;
   hourHeight: number;
+  slotMinutes: number;
+  defaultDuration: number;
   onSlotClick: (date: string, start: string, end: string) => void;
 }) {
   const todayKey = fmtDate(new Date());
   const totalHeight = hourHeight * 24;
+  const snap = Math.max(5, slotMinutes || 60);
+  const dur = Math.max(5, defaultDuration || 60);
+  // subdivision lines per hour (e.g. 60→0, 30→1, 20→2, 15→3, 10→5, 5→11)
+  const subs = Math.max(0, Math.round(60 / snap) - 1);
 
   function handleGridClick(day: Date, e: React.MouseEvent<HTMLDivElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
     const y = e.clientY - rect.top;
-    // 15-minute snap
-    const minutes = Math.max(0, Math.min(24 * 60 - 15, Math.round((y / hourHeight) * 60 / 15) * 15));
+    const minutes = Math.max(0, Math.min(24 * 60 - snap, Math.round((y / hourHeight) * 60 / snap) * snap));
     const start = hhmm(minutes);
-    const end = hhmm(Math.min(24 * 60 - 1, minutes + 60));
+    const end = hhmm(Math.min(24 * 60 - 1, minutes + dur));
     onSlotClick(fmtDate(day), start, end);
   }
 
