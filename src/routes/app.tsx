@@ -4,25 +4,42 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ChevronLeft, ChevronRight, Plus, LogOut, Settings, Trash2, Search, Bell,
-  Sliders, UserRound, Stethoscope, BarChart3,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  LogOut,
+  Settings,
+  Trash2,
+  Search,
+  Bell,
+  Sliders,
+  UserRound,
+  Stethoscope,
+  BarChart3,
 } from "lucide-react";
-import {
-  Popover, PopoverContent, PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import logoApae from "@/assets/logo-apae.png";
+import { getSession, clearSession, getMaster, setMaster, type Session } from "@/lib/auth";
 import {
-  getSession, clearSession, getMaster, setMaster, type Session,
-} from "@/lib/auth";
-import {
-  loadCalendars, saveCalendars, loadEvents, saveEvents,
-  suggestColor, PALETTE, type Calendar, type CalendarEvent,
+  loadCalendars,
+  saveCalendars,
+  loadEvents,
+  saveEvents,
+  suggestColor,
+  PALETTE,
+  type Calendar,
+  type CalendarEvent,
 } from "@/lib/calendar-store";
-import { loadSettings } from "@/lib/agenda-settings";
+import { DAY_KEYS, loadSettings, type AgendaSettings, type DayKey } from "@/lib/agenda-settings";
 
 export const Route = createFileRoute("/app")({
   head: () => ({ meta: [{ title: "Agenda — CAES" }] }),
@@ -31,9 +48,20 @@ export const Route = createFileRoute("/app")({
 
 // ---------- helpers ----------
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const DAY_INDEX_KEYS: DayKey[] = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
 const MONTHS = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
 ];
 
 function fmtDate(d: Date) {
@@ -85,7 +113,8 @@ function headerLabel(cursor: Date, view: "month" | "week" | "day"): string {
     return `${WEEKDAYS[cursor.getDay()]}, ${cursor.getDate()} ${MONTHS[cursor.getMonth()]} ${cursor.getFullYear()}`;
   }
   const ws = weekDays(cursor);
-  const a = ws[0]; const b = ws[6];
+  const a = ws[0];
+  const b = ws[6];
   if (a.getMonth() === b.getMonth()) {
     return `${a.getDate()}–${b.getDate()} ${MONTHS[a.getMonth()]} ${a.getFullYear()}`;
   }
@@ -105,6 +134,66 @@ function hhmm(totalMinutes: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+function ceilToStep(value: number, step: number): number {
+  return Math.ceil(value / step) * step;
+}
+
+function floorToStep(value: number, step: number): number {
+  return Math.floor(value / step) * step;
+}
+
+function dayKeyOf(d: Date): DayKey {
+  return DAY_INDEX_KEYS[d.getDay()];
+}
+
+function enabledByAnyConfig(d: Date, configs: AgendaSettings[]): boolean {
+  if (configs.length === 0) return true;
+  return configs.some((cfg) => cfg.days[dayKeyOf(d)]?.enabled);
+}
+
+function workingRangeForConfigs(configs: AgendaSettings[]) {
+  let start = 24 * 60;
+  let end = 0;
+  for (const cfg of configs) {
+    for (const key of DAY_KEYS) {
+      const day = cfg.days[key];
+      if (!day?.enabled) continue;
+      const s = minutesFromHHMM(day.workStart || "00:00");
+      const e = minutesFromHHMM(day.workEnd || "23:59");
+      if (e <= s) continue;
+      start = Math.min(start, s);
+      end = Math.max(end, e);
+    }
+  }
+  if (start >= end) return { startMinute: 0, endMinute: 24 * 60 };
+  return { startMinute: Math.max(0, start), endMinute: Math.min(24 * 60, end) };
+}
+
+function workingRangeForDayConfigs(d: Date, configs: AgendaSettings[]) {
+  const key = dayKeyOf(d);
+  let start = 24 * 60;
+  let end = 0;
+  for (const cfg of configs) {
+    const day = cfg.days[key];
+    if (!day?.enabled) continue;
+    const s = minutesFromHHMM(day.workStart || "00:00");
+    const e = minutesFromHHMM(day.workEnd || "23:59");
+    if (e <= s) continue;
+    start = Math.min(start, s);
+    end = Math.max(end, e);
+  }
+  if (start >= end) return null;
+  return { startMinute: Math.max(0, start), endMinute: Math.min(24 * 60, end) };
+}
+
+function nextEnabledDate(from: Date, configs: AgendaSettings[]) {
+  const d = new Date(from);
+  for (let i = 0; i < 14; i += 1) {
+    if (enabledByAnyConfig(d, configs)) return d;
+    d.setDate(d.getDate() + 1);
+  }
+  return from;
+}
 
 // ---------- component ----------
 type ViewMode = "month" | "week" | "day";
@@ -117,7 +206,11 @@ function CalendarApp() {
   const [cursor, setCursor] = useState(() => new Date());
   const [search, setSearch] = useState("");
   const [showCreateCal, setShowCreateCal] = useState(false);
-  const [showCreateEvt, setShowCreateEvt] = useState<{ date: string; start?: string; end?: string } | null>(null);
+  const [showCreateEvt, setShowCreateEvt] = useState<{
+    date: string;
+    start?: string;
+    end?: string;
+  } | null>(null);
   const [showMaster, setShowMaster] = useState(false);
   const [view, setView] = useState<ViewMode>("month");
   const [hourHeight, setHourHeight] = useState(48); // px per hour (zoom)
@@ -144,7 +237,9 @@ function CalendarApp() {
         const cfg = loadSettings(s.login, "default");
         setAgendaCfg(cfg);
         if (cfg.defaultView) setView(cfg.defaultView);
-      } catch { /* noop */ }
+      } catch {
+        /* noop */
+      }
     };
     apply();
     const onStorage = (e: StorageEvent) => {
@@ -158,7 +253,6 @@ function CalendarApp() {
     };
   }, [navigate]);
 
-
   useEffect(() => {
     if (session) saveCalendars(session.login, calendars);
   }, [calendars, session]);
@@ -170,10 +264,25 @@ function CalendarApp() {
     () => new Set(calendars.filter((c) => c.visible).map((c) => c.id)),
     [calendars],
   );
-  const calById = useMemo(
-    () => Object.fromEntries(calendars.map((c) => [c.id, c])),
-    [calendars],
+  const settingsByCalendarId = useMemo(() => {
+    if (!session || !agendaCfg) return {} as Record<string, AgendaSettings>;
+    return Object.fromEntries(
+      calendars.map((c) => [c.id, loadSettings(session.login, c.id)]),
+    ) as Record<string, AgendaSettings>;
+  }, [agendaCfg, calendars, session]);
+  const activeAgendaConfigs = useMemo(() => {
+    const visibleSpecific = calendars
+      .filter((c) => c.visible)
+      .map((c) => settingsByCalendarId[c.id])
+      .filter(Boolean);
+    return visibleSpecific.length > 0 ? visibleSpecific : agendaCfg ? [agendaCfg] : [];
+  }, [agendaCfg, calendars, settingsByCalendarId]);
+  const activeSlotMinutes = agendaCfg?.intervalDisplay ?? 60;
+  const activeWorkingRange = useMemo(
+    () => workingRangeForConfigs(activeAgendaConfigs),
+    [activeAgendaConfigs],
   );
+  const calById = useMemo(() => Object.fromEntries(calendars.map((c) => [c.id, c])), [calendars]);
 
   const filteredCalendars = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -192,6 +301,20 @@ function CalendarApp() {
     () => buildMonthGrid(cursor.getFullYear(), cursor.getMonth()),
     [cursor],
   );
+  const visibleMonthDays = useMemo(
+    () => monthDays.filter((d) => enabledByAnyConfig(d, activeAgendaConfigs)),
+    [activeAgendaConfigs, monthDays],
+  );
+  const visibleTimeGridDays = useMemo(() => {
+    const days = view === "week" ? weekDays(cursor) : [cursor];
+    return days.filter((d) => enabledByAnyConfig(d, activeAgendaConfigs));
+  }, [activeAgendaConfigs, cursor, view]);
+  const visibleWeekdayIndexes = useMemo(() => {
+    if (activeAgendaConfigs.length === 0) return DAY_INDEX_KEYS.map((_, i) => i);
+    return DAY_INDEX_KEYS.map((key, index) => ({ key, index }))
+      .filter(({ key }) => activeAgendaConfigs.some((cfg) => cfg.days[key]?.enabled))
+      .map(({ index }) => index);
+  }, [activeAgendaConfigs]);
 
   const eventsByDay = useMemo(() => {
     const map: Record<string, CalendarEvent[]> = {};
@@ -215,6 +338,22 @@ function CalendarApp() {
     navigate({ to: "/login" });
   }
 
+  function openQuickEvent() {
+    const snap = Math.max(5, activeSlotMinutes || 60);
+    const day = nextEnabledDate(new Date(), activeAgendaConfigs);
+    const range = workingRangeForDayConfigs(day, activeAgendaConfigs) ?? activeWorkingRange;
+    const startMinute = Math.max(range.startMinute, ceilToStep(range.startMinute, snap));
+    const endMinute = Math.min(
+      range.endMinute,
+      startMinute + Math.max(5, agendaCfg?.defaultDuration ?? 60),
+    );
+    setShowCreateEvt({
+      date: fmtDate(day),
+      start: hhmm(startMinute),
+      end: hhmm(Math.max(startMinute + 5, endMinute)),
+    });
+  }
+
   if (!session) return null;
 
   return (
@@ -231,7 +370,9 @@ function CalendarApp() {
         <div className="flex items-center gap-2">
           <div className="hidden text-right text-xs text-muted-foreground sm:block">
             <div className="font-semibold text-foreground">{session.login}</div>
-            <div className="capitalize">{session.role === "master" ? "Master (Dev)" : "Administrador"}</div>
+            <div className="capitalize">
+              {session.role === "master" ? "Master (Dev)" : "Administrador"}
+            </div>
           </div>
           {session.role === "master" && (
             <Button size="sm" variant="outline" onClick={() => setShowMaster(true)}>
@@ -297,16 +438,30 @@ function CalendarApp() {
           </div>
 
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
-            <CalGroup title="Minhas Agendas" cals={grouped.personal} onToggle={toggleCal} onDelete={deleteCal} />
+            <CalGroup
+              title="Minhas Agendas"
+              cals={grouped.personal}
+              onToggle={toggleCal}
+              onDelete={deleteCal}
+            />
             {grouped.team.length > 0 && (
-              <CalGroup title="Equipe" cals={grouped.team} onToggle={toggleCal} onDelete={deleteCal} />
+              <CalGroup
+                title="Equipe"
+                cals={grouped.team}
+                onToggle={toggleCal}
+                onDelete={deleteCal}
+              />
             )}
             {grouped.shared.length > 0 && (
-              <CalGroup title="Compartilhados" cals={grouped.shared} onToggle={toggleCal} onDelete={deleteCal} />
+              <CalGroup
+                title="Compartilhados"
+                cals={grouped.shared}
+                onToggle={toggleCal}
+                onDelete={deleteCal}
+              />
             )}
           </div>
         </aside>
-
 
         {/* Main */}
         <main className="min-w-0 flex-1 overflow-auto p-4">
@@ -315,10 +470,18 @@ function CalendarApp() {
               <Button size="sm" variant="outline" onClick={() => setCursor(new Date())}>
                 Hoje
               </Button>
-              <Button size="icon" variant="ghost" onClick={() => setCursor(shiftCursor(cursor, view, -1))}>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setCursor(shiftCursor(cursor, view, -1))}
+              >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button size="icon" variant="ghost" onClick={() => setCursor(shiftCursor(cursor, view, 1))}>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setCursor(shiftCursor(cursor, view, 1))}
+              >
                 <ChevronRight className="h-4 w-4" />
               </Button>
               <h2 className="ml-2 text-xl font-bold">{headerLabel(cursor, view)}</h2>
@@ -330,7 +493,9 @@ function CalendarApp() {
                     key={v}
                     onClick={() => setView(v)}
                     className={`rounded px-3 py-1 text-xs font-semibold ${
-                      view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"
+                      view === v
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-accent"
                     }`}
                   >
                     {v === "month" ? "Mês" : v === "week" ? "Semana" : "Dia"}
@@ -345,16 +510,20 @@ function CalendarApp() {
                     aria-label="Diminuir zoom"
                     className="px-1 text-muted-foreground hover:text-foreground"
                     onClick={() => setHourHeight((h) => Math.max(24, h - 12))}
-                  >−</button>
+                  >
+                    −
+                  </button>
                   <span className="w-14 text-center text-xs">{hourHeight}px/h</span>
                   <button
                     aria-label="Aumentar zoom"
                     className="px-1 text-muted-foreground hover:text-foreground"
                     onClick={() => setHourHeight((h) => Math.min(160, h + 12))}
-                  >+</button>
+                  >
+                    +
+                  </button>
                 </div>
               )}
-              <Button onClick={() => setShowCreateEvt({ date: fmtDate(new Date()) })}>
+              <Button onClick={openQuickEvent}>
                 <Plus className="h-4 w-4" /> Evento
               </Button>
             </div>
@@ -362,13 +531,25 @@ function CalendarApp() {
 
           {view === "month" && (
             <div className="overflow-hidden rounded-lg border border-border bg-card">
-              <div className="grid grid-cols-7 border-b border-border bg-muted/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {WEEKDAYS.map((w) => (
-                  <div key={w} className="px-2 py-2 text-center">{w}</div>
+              <div
+                className="grid border-b border-border bg-muted/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                style={{
+                  gridTemplateColumns: `repeat(${visibleWeekdayIndexes.length || 1}, minmax(0, 1fr))`,
+                }}
+              >
+                {visibleWeekdayIndexes.map((dayIndex) => (
+                  <div key={dayIndex} className="px-2 py-2 text-center">
+                    {WEEKDAYS[dayIndex]}
+                  </div>
                 ))}
               </div>
-              <div className="grid grid-cols-7 grid-rows-6">
-                {monthDays.map((d) => {
+              <div
+                className="grid grid-rows-6"
+                style={{
+                  gridTemplateColumns: `repeat(${visibleWeekdayIndexes.length || 1}, minmax(0, 1fr))`,
+                }}
+              >
+                {visibleMonthDays.map((d) => {
                   const key = fmtDate(d);
                   const inMonth = d.getMonth() === cursor.getMonth();
                   const isToday = key === fmtDate(new Date());
@@ -381,9 +562,11 @@ function CalendarApp() {
                         inMonth ? "" : "bg-muted/30 text-muted-foreground"
                       }`}
                     >
-                      <div className={`mb-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
-                        isToday ? "bg-primary text-primary-foreground" : ""
-                      }`}>
+                      <div
+                        className={`mb-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
+                          isToday ? "bg-primary text-primary-foreground" : ""
+                        }`}
+                      >
                         {d.getDate()}
                       </div>
                       <div className="space-y-1">
@@ -396,7 +579,8 @@ function CalendarApp() {
                               style={{ backgroundColor: c?.color ?? "#64748b" }}
                               title={e.title}
                             >
-                              {e.startTime ? `${e.startTime} ` : ""}{e.title}
+                              {e.startTime ? `${e.startTime} ` : ""}
+                              {e.title}
                             </div>
                           );
                         })}
@@ -415,19 +599,20 @@ function CalendarApp() {
 
           {(view === "week" || view === "day") && (
             <TimeGrid
-              days={view === "week" ? weekDays(cursor) : [cursor]}
+              days={visibleTimeGridDays}
               events={events}
               calById={calById}
               visibleCalIds={visibleCalIds}
               hourHeight={hourHeight}
-              slotMinutes={agendaCfg?.intervalDisplay ?? 60}
+              slotMinutes={activeSlotMinutes}
               defaultDuration={agendaCfg?.defaultDuration ?? 60}
+              workingRange={activeWorkingRange}
+              activeAgendaConfigs={activeAgendaConfigs}
               onSlotClick={(date, start, end) => setShowCreateEvt({ date, start, end })}
             />
           )}
         </main>
       </div>
-
 
       {/* Create calendar modal */}
       <CreateCalendarDialog
@@ -444,6 +629,8 @@ function CalendarApp() {
         initialStart={showCreateEvt?.start}
         initialEnd={showCreateEvt?.end}
         calendars={calendars}
+        defaultAgendaConfig={agendaCfg}
+        settingsByCalendarId={settingsByCalendarId}
         onClose={() => setShowCreateEvt(null)}
         onCreate={(e) => setEvents((es) => [...es, e])}
       />
@@ -466,7 +653,11 @@ function MiniCalendar({ cursor, onPick }: { cursor: Date; onPick: (d: Date) => v
         {MONTHS[cursor.getMonth()]} {cursor.getFullYear()}
       </div>
       <div className="grid grid-cols-7 text-[10px] text-muted-foreground">
-        {WEEKDAYS.map((w) => <div key={w} className="text-center">{w[0]}</div>)}
+        {WEEKDAYS.map((w) => (
+          <div key={w} className="text-center">
+            {w[0]}
+          </div>
+        ))}
       </div>
       <div className="grid grid-cols-7">
         {days.map((d) => {
@@ -478,7 +669,11 @@ function MiniCalendar({ cursor, onPick }: { cursor: Date; onPick: (d: Date) => v
               key={key}
               onClick={() => onPick(d)}
               className={`m-0.5 h-6 w-6 rounded-full text-[11px] ${
-                isToday ? "bg-primary text-primary-foreground" : inMonth ? "hover:bg-accent" : "text-muted-foreground/60"
+                isToday
+                  ? "bg-primary text-primary-foreground"
+                  : inMonth
+                    ? "hover:bg-accent"
+                    : "text-muted-foreground/60"
               }`}
             >
               {d.getDate()}
@@ -491,18 +686,28 @@ function MiniCalendar({ cursor, onPick }: { cursor: Date; onPick: (d: Date) => v
 }
 
 function CalGroup({
-  title, cals, onToggle, onDelete,
+  title,
+  cals,
+  onToggle,
+  onDelete,
 }: {
-  title: string; cals: Calendar[];
-  onToggle: (id: string) => void; onDelete: (id: string) => void;
+  title: string;
+  cals: Calendar[];
+  onToggle: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   if (cals.length === 0) return null;
   return (
     <div>
-      <div className="mb-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">{title}</div>
+      <div className="mb-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+        {title}
+      </div>
       <ul className="space-y-0.5">
         {cals.map((c) => (
-          <li key={c.id} className="group flex items-center gap-2 rounded px-1.5 py-1 hover:bg-accent/40">
+          <li
+            key={c.id}
+            className="group flex items-center gap-2 rounded px-1.5 py-1 hover:bg-accent/40"
+          >
             <button
               onClick={() => onToggle(c.id)}
               className="flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 transition"
@@ -512,7 +717,9 @@ function CalGroup({
               }}
               aria-label={c.visible ? "Ocultar" : "Mostrar"}
             />
-            <span className={`flex-1 truncate text-sm ${c.visible ? "" : "text-muted-foreground line-through"}`}>
+            <span
+              className={`flex-1 truncate text-sm ${c.visible ? "" : "text-muted-foreground line-through"}`}
+            >
               {c.name}
             </span>
             <button
@@ -530,10 +737,15 @@ function CalGroup({
 }
 
 function CreateCalendarDialog({
-  open, onClose, existing, onCreate,
+  open,
+  onClose,
+  existing,
+  onCreate,
 }: {
-  open: boolean; onClose: () => void;
-  existing: Calendar[]; onCreate: (c: Calendar) => void;
+  open: boolean;
+  onClose: () => void;
+  existing: Calendar[];
+  onCreate: (c: Calendar) => void;
 }) {
   const [name, setName] = useState("");
   const [color, setColor] = useState(suggestColor(existing));
@@ -553,12 +765,15 @@ function CreateCalendarDialog({
         <DialogHeader>
           <DialogTitle>Nova agenda</DialogTitle>
           <DialogDescription>Defina nome, cor e categoria.</DialogDescription>
-
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Nome</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Financeiro" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex.: Financeiro"
+            />
           </div>
           <div className="space-y-2">
             <Label>Categoria</Label>
@@ -568,7 +783,9 @@ function CreateCalendarDialog({
                   key={g}
                   onClick={() => setGroup(g)}
                   className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                    group === g ? "border-primary bg-primary text-primary-foreground" : "border-border"
+                    group === g
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border"
                   }`}
                 >
                   {g === "personal" ? "Pessoal" : g === "team" ? "Equipe" : "Compartilhado"}
@@ -598,7 +815,9 @@ function CreateCalendarDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
           <Button
             disabled={!name.trim()}
             onClick={() => {
@@ -621,11 +840,25 @@ function CreateCalendarDialog({
 }
 
 function CreateEventDialog({
-  open, date, initialStart, initialEnd, calendars, onClose, onCreate,
+  open,
+  date,
+  initialStart,
+  initialEnd,
+  calendars,
+  defaultAgendaConfig,
+  settingsByCalendarId,
+  onClose,
+  onCreate,
 }: {
-  open: boolean; date: string; initialStart?: string; initialEnd?: string;
+  open: boolean;
+  date: string;
+  initialStart?: string;
+  initialEnd?: string;
   calendars: Calendar[];
-  onClose: () => void; onCreate: (e: CalendarEvent) => void;
+  defaultAgendaConfig: AgendaSettings | null;
+  settingsByCalendarId: Record<string, AgendaSettings>;
+  onClose: () => void;
+  onCreate: (e: CalendarEvent) => void;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -645,8 +878,18 @@ function CreateEventDialog({
     }
   }, [open, date, calendars, initialStart, initialEnd]);
 
-
   const selected = calendars.find((c) => c.id === calendarId);
+  const effectiveCfg = settingsByCalendarId[calendarId] ?? defaultAgendaConfig;
+  const selectedDate = d ? new Date(`${d}T00:00:00`) : null;
+  const selectedDayCfg =
+    selectedDate && effectiveCfg ? effectiveCfg.days[dayKeyOf(selectedDate)] : null;
+  const startMinute = minutesFromHHMM(start);
+  const endMinute = minutesFromHHMM(end);
+  const workStart = minutesFromHHMM(selectedDayCfg?.workStart || "00:00");
+  const workEnd = minutesFromHHMM(selectedDayCfg?.workEnd || "23:59");
+  const validAgendaDay = !effectiveCfg || !!selectedDayCfg?.enabled;
+  const validAgendaTime =
+    !effectiveCfg || (endMinute > startMinute && startMinute >= workStart && endMinute <= workEnd);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -658,7 +901,11 @@ function CreateEventDialog({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Título</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Reunião, consulta…" />
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Reunião, consulta…"
+            />
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div className="space-y-2">
@@ -693,7 +940,11 @@ function CreateEventDialog({
           </div>
           <div className="space-y-2">
             <Label>Descrição</Label>
-            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+            />
           </div>
           {selected && (
             <div className="rounded-md border border-border p-2 text-xs text-muted-foreground">
@@ -704,11 +955,18 @@ function CreateEventDialog({
               />
             </div>
           )}
+          {(!validAgendaDay || !validAgendaTime) && (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+              Este dia ou horário está fora das configurações salvas para a agenda selecionada.
+            </div>
+          )}
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
           <Button
-            disabled={!title.trim() || !calendarId}
+            disabled={!title.trim() || !calendarId || !validAgendaDay || !validAgendaTime}
             onClick={() => {
               onCreate({
                 id: crypto.randomUUID(),
@@ -766,7 +1024,9 @@ function MasterDialog({ open, onClose }: { open: boolean; onClose: () => void })
           {saved && <p className="text-sm text-primary">Credenciais atualizadas.</p>}
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Fechar</Button>
+          <Button variant="ghost" onClick={onClose}>
+            Fechar
+          </Button>
           <Button
             disabled={!login.trim() || !password}
             onClick={() => {
@@ -783,10 +1043,17 @@ function MasterDialog({ open, onClose }: { open: boolean; onClose: () => void })
 }
 
 // ---------- Time grid (week / day view) ----------
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
-
 function TimeGrid({
-  days, events, calById, visibleCalIds, hourHeight, slotMinutes, defaultDuration, onSlotClick,
+  days,
+  events,
+  calById,
+  visibleCalIds,
+  hourHeight,
+  slotMinutes,
+  defaultDuration,
+  workingRange,
+  activeAgendaConfigs,
+  onSlotClick,
 }: {
   days: Date[];
   events: CalendarEvent[];
@@ -795,22 +1062,38 @@ function TimeGrid({
   hourHeight: number;
   slotMinutes: number;
   defaultDuration: number;
+  workingRange: { startMinute: number; endMinute: number };
+  activeAgendaConfigs: AgendaSettings[];
   onSlotClick: (date: string, start: string, end: string) => void;
 }) {
   const todayKey = fmtDate(new Date());
-  const totalHeight = hourHeight * 24;
   const snap = Math.max(5, slotMinutes || 60);
   const dur = Math.max(5, defaultDuration || 60);
-  // subdivision lines per hour (e.g. 60→0, 30→1, 20→2, 15→3, 10→5, 5→11)
-  const subs = Math.max(0, Math.round(60 / snap) - 1);
+  const startMinute = workingRange.startMinute;
+  const endMinute = Math.max(startMinute + snap, workingRange.endMinute);
+  const totalHeight = ((endMinute - startMinute) / 60) * hourHeight;
+  const timeMarks = Array.from(
+    { length: Math.floor((endMinute - startMinute) / snap) + 1 },
+    (_, i) => startMinute + i * snap,
+  ).filter((m) => m >= startMinute && m <= endMinute);
 
   function handleGridClick(day: Date, e: React.MouseEvent<HTMLDivElement>) {
+    const dayRange = workingRangeForDayConfigs(day, activeAgendaConfigs) ?? workingRange;
     const rect = e.currentTarget.getBoundingClientRect();
     const y = e.clientY - rect.top;
-    const minutes = Math.max(0, Math.min(24 * 60 - snap, Math.round((y / hourHeight) * 60 / snap) * snap));
+    const rawMinutes = startMinute + Math.round(((y / hourHeight) * 60) / snap) * snap;
+    const minutes = Math.max(dayRange.startMinute, Math.min(dayRange.endMinute - snap, rawMinutes));
     const start = hhmm(minutes);
-    const end = hhmm(Math.min(24 * 60 - 1, minutes + dur));
+    const end = hhmm(Math.min(dayRange.endMinute, minutes + dur));
     onSlotClick(fmtDate(day), start, end);
+  }
+
+  if (days.length === 0) {
+    return (
+      <div className="rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+        Nenhum dia habilitado para este período conforme as configurações da agenda.
+      </div>
+    );
   }
 
   return (
@@ -826,9 +1109,11 @@ function TimeGrid({
           return (
             <div key={fmtDate(d)} className="px-2 py-2 text-center">
               <div>{WEEKDAYS[d.getDay()]}</div>
-              <div className={`mx-auto mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full text-sm ${
-                isToday ? "bg-primary text-primary-foreground" : "text-foreground"
-              }`}>
+              <div
+                className={`mx-auto mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full text-sm ${
+                  isToday ? "bg-primary text-primary-foreground" : "text-foreground"
+                }`}
+              >
                 {d.getDate()}
               </div>
             </div>
@@ -844,13 +1129,13 @@ function TimeGrid({
         >
           {/* Hours column */}
           <div className="relative" style={{ height: totalHeight }}>
-            {HOURS.map((h) => (
+            {timeMarks.map((m) => (
               <div
-                key={h}
+                key={m}
                 className="absolute left-0 right-0 -translate-y-1/2 pr-2 text-right text-[11px] text-muted-foreground"
-                style={{ top: h * hourHeight }}
+                style={{ top: ((m - startMinute) / 60) * hourHeight }}
               >
-                {h === 0 ? "" : `${String(h).padStart(2, "0")}:00`}
+                {hhmm(m)}
               </div>
             ))}
           </div>
@@ -858,9 +1143,7 @@ function TimeGrid({
           {/* Day columns */}
           {days.map((day) => {
             const key = fmtDate(day);
-            const dayEvts = events.filter(
-              (e) => e.date === key && visibleCalIds.has(e.calendarId),
-            );
+            const dayEvts = events.filter((e) => e.date === key && visibleCalIds.has(e.calendarId));
             return (
               <div
                 key={key}
@@ -868,30 +1151,26 @@ function TimeGrid({
                 className="relative cursor-pointer border-l border-border"
                 style={{ height: totalHeight }}
               >
-                {/* hour lines */}
-                {HOURS.map((h) => (
+                {/* time lines based on intervalo de exibição */}
+                {timeMarks.map((m) => (
                   <div
-                    key={h}
+                    key={m}
                     className="absolute left-0 right-0 border-t border-border/60"
-                    style={{ top: h * hourHeight }}
+                    style={{ top: ((m - startMinute) / 60) * hourHeight }}
                   />
                 ))}
-                {/* subdivision lines based on intervalo de exibição */}
-                {subs > 0 && HOURS.map((h) =>
-                  Array.from({ length: subs }, (_, i) => i + 1).map((i) => (
-                    <div
-                      key={`sub-${h}-${i}`}
-                      className="absolute left-0 right-0 border-t border-dashed border-border/30"
-                      style={{ top: h * hourHeight + (hourHeight * i) / (subs + 1) }}
-                    />
-                  )),
-                )}
                 {/* events */}
                 {dayEvts.map((ev) => {
                   const sm = minutesFromHHMM(ev.startTime ?? "09:00");
-                  const em = Math.max(sm + 15, minutesFromHHMM(ev.endTime ?? ev.startTime ?? "10:00"));
-                  const top = (sm / 60) * hourHeight;
-                  const height = ((em - sm) / 60) * hourHeight;
+                  const em = Math.max(
+                    sm + 15,
+                    minutesFromHHMM(ev.endTime ?? ev.startTime ?? "10:00"),
+                  );
+                  if (em <= startMinute || sm >= endMinute) return null;
+                  const clippedStart = Math.max(sm, startMinute);
+                  const clippedEnd = Math.min(em, endMinute);
+                  const top = ((clippedStart - startMinute) / 60) * hourHeight;
+                  const height = ((clippedEnd - clippedStart) / 60) * hourHeight;
                   const color = calById[ev.calendarId]?.color ?? "#64748b";
                   return (
                     <div
@@ -901,7 +1180,9 @@ function TimeGrid({
                       className="absolute left-1 right-1 overflow-hidden rounded px-1.5 py-1 text-[11px] font-medium text-white shadow"
                       style={{ top, height, backgroundColor: color }}
                     >
-                      <div className="truncate">{ev.startTime ?? ""} {ev.title}</div>
+                      <div className="truncate">
+                        {ev.startTime ?? ""} {ev.title}
+                      </div>
                       {height > 32 && ev.description && (
                         <div className="truncate text-[10px] opacity-90">{ev.description}</div>
                       )}
@@ -989,5 +1270,3 @@ function BirthdayBell() {
     </Popover>
   );
 }
-
-
