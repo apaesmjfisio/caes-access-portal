@@ -147,6 +147,28 @@ function LandingPage() {
         </div>
       </section>
 
+      {/* Features cards — transição entre hero e "Sobre" */}
+      <section className="relative z-20 mx-auto -mt-16 max-w-7xl px-6 md:-mt-24">
+        <div className="grid gap-6 rounded-3xl bg-card p-6 shadow-[var(--shadow-card)] sm:grid-cols-2 md:p-10 lg:grid-cols-4">
+          {features.map(({ icon: Icon, title, description }) => (
+            <div
+              key={title}
+              className="flex flex-col items-center px-4 text-center"
+            >
+              <div className="mb-4 inline-flex rounded-2xl bg-secondary p-4 text-primary">
+                <Icon className="h-8 w-8" strokeWidth={1.75} />
+              </div>
+              <div className="mb-2 text-sm font-bold uppercase tracking-[0.15em] text-foreground">
+                {title}
+              </div>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {description}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Sobre */}
       <section id="sobre" className="mx-auto max-w-7xl px-6 py-28">
         <div className="mx-auto max-w-3xl text-center">
