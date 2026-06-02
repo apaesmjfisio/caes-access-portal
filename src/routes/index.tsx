@@ -1,8 +1,33 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Phone, MapPin, Mail } from "lucide-react";
+import { Phone, MapPin, Mail, Stethoscope, Activity, Heart, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import heroImage from "@/assets/hero-caes.png";
+import heroAsset from "@/assets/hero-caes-new.png.asset.json";
 import logoApae from "@/assets/logo-apae.png";
+
+const heroImage = heroAsset.url;
+
+const features = [
+  {
+    icon: Stethoscope,
+    title: "Atendimento Especializado",
+    description: "Equipe multidisciplinar dedicada à saúde e qualidade de vida.",
+  },
+  {
+    icon: Activity,
+    title: "Reabilitação",
+    description: "Fisioterapia, terapias e acompanhamento contínuo.",
+  },
+  {
+    icon: Heart,
+    title: "Cuidado Humanizado",
+    description: "Atenção centrada na pessoa e na sua família.",
+  },
+  {
+    icon: Users,
+    title: "Inclusão Social",
+    description: "Promoção da cidadania e direitos da pessoa com deficiência.",
+  },
+];
 
 export const Route = createFileRoute("/")({
   head: () => ({
