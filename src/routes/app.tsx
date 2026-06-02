@@ -123,7 +123,7 @@ function enabledByAnyConfig(d: Date, configs: AgendaSettings[]): boolean {
   return configs.some((cfg) => cfg.days[dayKeyOf(d)]?.enabled);
 }
 
-function workingRangeForConfigs(configs: AgendaSettings[], snap: number) {
+function workingRangeForConfigs(configs: AgendaSettings[]) {
   let start = 24 * 60;
   let end = 0;
   for (const cfg of configs) {
@@ -138,10 +138,7 @@ function workingRangeForConfigs(configs: AgendaSettings[], snap: number) {
     }
   }
   if (start >= end) return { startMinute: 0, endMinute: 24 * 60 };
-  return {
-    startMinute: Math.max(0, floorToStep(start, snap)),
-    endMinute: Math.min(24 * 60, ceilToStep(end, snap)),
-  };
+  return { startMinute: Math.max(0, start), endMinute: Math.min(24 * 60, end) };
 }
 
 
@@ -224,8 +221,8 @@ function CalendarApp() {
   }, [agendaCfg, calendars, settingsByCalendarId]);
   const activeSlotMinutes = agendaCfg?.intervalDisplay ?? 60;
   const activeWorkingRange = useMemo(
-    () => workingRangeForConfigs(activeAgendaConfigs, Math.max(5, activeSlotMinutes || 60)),
-    [activeAgendaConfigs, activeSlotMinutes],
+    () => workingRangeForConfigs(activeAgendaConfigs),
+    [activeAgendaConfigs],
   );
   const calById = useMemo(
     () => Object.fromEntries(calendars.map((c) => [c.id, c])),
@@ -257,6 +254,13 @@ function CalendarApp() {
     const days = view === "week" ? weekDays(cursor) : [cursor];
     return days.filter((d) => enabledByAnyConfig(d, activeAgendaConfigs));
   }, [activeAgendaConfigs, cursor, view]);
+  const visibleWeekdayIndexes = useMemo(() => {
+    if (activeAgendaConfigs.length === 0) return DAY_INDEX_KEYS.map((_, i) => i);
+    return DAY_INDEX_KEYS
+      .map((key, index) => ({ key, index }))
+      .filter(({ key }) => activeAgendaConfigs.some((cfg) => cfg.days[key]?.enabled))
+      .map(({ index }) => index);
+  }, [activeAgendaConfigs]);
 
   const eventsByDay = useMemo(() => {
     const map: Record<string, CalendarEvent[]> = {};
