@@ -1,8 +1,33 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Phone, MapPin, Mail } from "lucide-react";
+import { Phone, MapPin, Mail, Stethoscope, Activity, Heart, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import heroImage from "@/assets/hero-caes.png";
+import heroAsset from "@/assets/hero-caes-new.png.asset.json";
 import logoApae from "@/assets/logo-apae.png";
+
+const heroImage = heroAsset.url;
+
+const features = [
+  {
+    icon: Stethoscope,
+    title: "Atendimento Especializado",
+    description: "Equipe multidisciplinar dedicada à saúde e qualidade de vida.",
+  },
+  {
+    icon: Activity,
+    title: "Reabilitação",
+    description: "Fisioterapia, terapias e acompanhamento contínuo.",
+  },
+  {
+    icon: Heart,
+    title: "Cuidado Humanizado",
+    description: "Atenção centrada na pessoa e na sua família.",
+  },
+  {
+    icon: Users,
+    title: "Inclusão Social",
+    description: "Promoção da cidadania e direitos da pessoa com deficiência.",
+  },
+];
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -40,7 +65,7 @@ function LandingPage() {
         id="inicio"
         className="relative min-h-[100vh] w-full overflow-hidden"
         style={{
-          backgroundImage: `linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0.55)), url(${heroImage})`,
+          backgroundImage: `linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.25)), url(${heroImage})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
@@ -119,6 +144,28 @@ function LandingPage() {
               <Link to="/triagem">Saiba Mais</Link>
             </Button>
           </div>
+        </div>
+      </section>
+
+      {/* Features cards — transição entre hero e "Sobre" */}
+      <section className="relative z-20 mx-auto -mt-16 max-w-7xl px-6 md:-mt-24">
+        <div className="grid gap-6 rounded-3xl bg-card p-6 shadow-[var(--shadow-card)] sm:grid-cols-2 md:p-10 lg:grid-cols-4">
+          {features.map(({ icon: Icon, title, description }) => (
+            <div
+              key={title}
+              className="flex flex-col items-center px-4 text-center"
+            >
+              <div className="mb-4 inline-flex rounded-2xl bg-secondary p-4 text-primary">
+                <Icon className="h-8 w-8" strokeWidth={1.75} />
+              </div>
+              <div className="mb-2 text-sm font-bold uppercase tracking-[0.15em] text-foreground">
+                {title}
+              </div>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {description}
+              </p>
+            </div>
+          ))}
         </div>
       </section>
 
