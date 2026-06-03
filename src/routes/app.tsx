@@ -1124,7 +1124,7 @@ function TimeGrid({
       {/* Scrollable body */}
       <div className="max-h-[70vh] overflow-y-auto">
         <div
-          className="relative grid pt-4"
+          className="relative grid pt-4 pb-6"
           style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(0, 1fr))` }}
         >
           {/* Hours column */}
