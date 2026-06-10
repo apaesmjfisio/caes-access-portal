@@ -25,6 +25,7 @@ import {
   UserRound,
   Stethoscope,
   BarChart3,
+  UserPlus,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import logoApae from "@/assets/logo-apae.png";
@@ -387,6 +388,15 @@ function CalendarApp() {
             onClick={() => navigate({ to: "/sistema" })}
           >
             <Sliders className="h-4 w-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="outline"
+            aria-label="Cadastro de pacientes"
+            title="Cadastro de pacientes"
+            onClick={() => navigate({ to: "/pacientes" })}
+          >
+            <UserPlus className="h-4 w-4" />
           </Button>
           <Button
             size="icon"
