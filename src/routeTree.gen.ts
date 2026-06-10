@@ -13,6 +13,7 @@ import { Route as TriagemRouteImport } from './routes/triagem'
 import { Route as SistemaRouteImport } from './routes/sistema'
 import { Route as ServicosRouteImport } from './routes/servicos'
 import { Route as ProfissionaisRouteImport } from './routes/profissionais'
+import { Route as PacientesRouteImport } from './routes/pacientes'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
@@ -37,6 +38,11 @@ const ServicosRoute = ServicosRouteImport.update({
 const ProfissionaisRoute = ProfissionaisRouteImport.update({
   id: '/profissionais',
   path: '/profissionais',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PacientesRoute = PacientesRouteImport.update({
+  id: '/pacientes',
+  path: '/pacientes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/pacientes': typeof PacientesRoute
   '/profissionais': typeof ProfissionaisRoute
   '/servicos': typeof ServicosRoute
   '/sistema': typeof SistemaRoute
@@ -82,6 +89,7 @@ export interface FileRoutesByTo {
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/pacientes': typeof PacientesRoute
   '/profissionais': typeof ProfissionaisRoute
   '/servicos': typeof ServicosRoute
   '/sistema': typeof SistemaRoute
@@ -94,6 +102,7 @@ export interface FileRoutesById {
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/pacientes': typeof PacientesRoute
   '/profissionais': typeof ProfissionaisRoute
   '/servicos': typeof ServicosRoute
   '/sistema': typeof SistemaRoute
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/dashboard'
     | '/login'
+    | '/pacientes'
     | '/profissionais'
     | '/servicos'
     | '/sistema'
@@ -118,6 +128,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/dashboard'
     | '/login'
+    | '/pacientes'
     | '/profissionais'
     | '/servicos'
     | '/sistema'
@@ -129,6 +140,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/dashboard'
     | '/login'
+    | '/pacientes'
     | '/profissionais'
     | '/servicos'
     | '/sistema'
@@ -141,6 +153,7 @@ export interface RootRouteChildren {
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
+  PacientesRoute: typeof PacientesRoute
   ProfissionaisRoute: typeof ProfissionaisRoute
   ServicosRoute: typeof ServicosRoute
   SistemaRoute: typeof SistemaRoute
@@ -175,6 +188,13 @@ declare module '@tanstack/react-router' {
       path: '/profissionais'
       fullPath: '/profissionais'
       preLoaderRoute: typeof ProfissionaisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pacientes': {
+      id: '/pacientes'
+      path: '/pacientes'
+      fullPath: '/pacientes'
+      preLoaderRoute: typeof PacientesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -221,6 +241,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConfiguracoesRoute: ConfiguracoesRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
+  PacientesRoute: PacientesRoute,
   ProfissionaisRoute: ProfissionaisRoute,
   ServicosRoute: ServicosRoute,
   SistemaRoute: SistemaRoute,
