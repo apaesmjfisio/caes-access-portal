@@ -392,6 +392,15 @@ function CalendarApp() {
           <Button
             size="icon"
             variant="outline"
+            aria-label="Cadastro de pacientes"
+            title="Cadastro de pacientes"
+            onClick={() => navigate({ to: "/pacientes" })}
+          >
+            <UserPlus className="h-4 w-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="outline"
             aria-label="Dashboard"
             title="Dashboard"
             onClick={() => navigate({ to: "/dashboard" })}
