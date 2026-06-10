@@ -8,6 +8,7 @@ import logoApae from "@/assets/logo-apae.png";
 import { login as doLogin } from "@/lib/auth";
 
 export const Route = createFileRoute("/login")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Acesso Profissional — CAES APAE SMJ" },
