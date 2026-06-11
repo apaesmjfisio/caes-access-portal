@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   X, Save, Eraser, Trash2, ArrowRight, ArrowLeft, Search, Camera, Plus,
   User, Phone, MapPin, UserPlus, Star, HelpCircle, FileText, Info, Mail, MessageSquare,
-  LayoutGrid,
+  LayoutGrid, CheckCircle2, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,11 @@ import {
   TIPOS_SANGUINEOS, FATORES_RH, ETNIAS, RELIGIOES, ORGAOS_EMISSORES, PARENTESCOS,
   type Patient, type Endereco, type Documento, type ContatoEmergencia,
 } from "@/lib/patients-store";
+import { MaskedInput } from "@/components/MaskedInput";
+import {
+  maskCPF, validateCPF, maskGroup3FromRight, maskCNS, validateCNS,
+  maskCelular, maskFixo, maskTelefoneSmart, maskCEP, fetchViaCep, onlyDigits,
+} from "@/lib/masks";
 
 export const Route = createFileRoute("/pacientes")({
   head: () => ({ meta: [{ title: "Cadastro de Pacientes — CAES" }] }),
@@ -68,11 +73,12 @@ function PacientesPage() {
   const filtered = useMemo(() => {
     const t = searchTerm.trim().toLowerCase();
     if (!t) return list;
+    const td = onlyDigits(t);
     return list.filter(p =>
       p.nomeCompleto.toLowerCase().includes(t) ||
-      p.cpf.toLowerCase().includes(t) ||
-      p.cns.toLowerCase().includes(t) ||
-      p.celularPrincipal.toLowerCase().includes(t) ||
+      (td && onlyDigits(p.cpf).includes(td)) ||
+      (td && onlyDigits(p.cns).includes(td)) ||
+      (td && onlyDigits(p.celularPrincipal).includes(td)) ||
       p.emailPrincipal.toLowerCase().includes(t),
     );
   }, [list, searchTerm]);
@@ -86,7 +92,12 @@ function PacientesPage() {
   function doSave() {
     if (!session) return;
     if (!patient.nomeCompleto.trim()) { toast.error("Informe o nome completo do paciente."); return; }
-    if (!patient.cpf.trim()) { toast.error("Informe o CPF do paciente."); return; }
+    const cpfDigits = onlyDigits(patient.cpf);
+    if (!cpfDigits) { toast.error("Informe o CPF do paciente."); return; }
+    if (!validateCPF(cpfDigits)) { toast.error("CPF inválido. Verifique os dígitos."); return; }
+    if (patient.cns && !validateCNS(patient.cns)) {
+      toast.error("CNS inválido. Verifique o número do Cartão SUS."); return;
+    }
     const now = new Date().toISOString();
     const exists = list.some(p => p.id === patient.id);
     const updated = exists
@@ -181,28 +192,28 @@ function PacientesPage() {
             {tab === 5 && <TabEmergencia p={patient} setP={setPatient} />}
           </div>
 
-          {/* Right side action panel */}
-          <aside className="space-y-5">
-            <Card className="border-slate-200 p-4">
-              <h3 className="mb-3 text-base font-semibold text-slate-700">Ações</h3>
-              <div className="space-y-2">
+          {/* Right side action panel (sticky) */}
+          <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+            <Card className="border-slate-200 p-3">
+              <h3 className="mb-2 text-sm font-semibold text-slate-700">Ações</h3>
+              <div className="space-y-1.5">
                 <ActionBtn onClick={doSave} color="emerald" icon={<Save className="h-4 w-4" />} label="Salvar" hint="F2" />
                 <ActionBtn onClick={doClear} color="rose" icon={<Eraser className="h-4 w-4" />} label="Limpar" hint="F3" />
-                <ActionBtn onClick={doDelete} color="amber" icon={<Trash2 className="h-4 w-4" />} label="Apagar Contato" hint="F4" />
+                <ActionBtn onClick={doDelete} color="amber" icon={<Trash2 className="h-4 w-4" />} label="Apagar" hint="F4" />
                 <ActionBtn onClick={() => setTab(t => Math.min(5, t + 1))} color="sky" icon={<ArrowRight className="h-4 w-4" />} label="Próximo" hint="F5" variant="outline" />
-                <ActionBtn onClick={() => setTab(t => Math.max(1, t - 1))} color="sky" icon={<ArrowLeft className="h-4 w-4" />} label="Anterior / Voltar" hint="F6" variant="outline" />
+                <ActionBtn onClick={() => setTab(t => Math.max(1, t - 1))} color="sky" icon={<ArrowLeft className="h-4 w-4" />} label="Anterior" hint="F6" variant="outline" />
               </div>
             </Card>
 
-            <Card className="border-amber-200 bg-amber-50/50 p-4">
-              <div className="mb-2 flex items-center gap-2 text-amber-700">
+            <Card className="border-amber-200 bg-amber-50/50 p-3">
+              <div className="mb-1.5 flex items-center gap-2 text-amber-700">
                 <HelpCircle className="h-4 w-4" />
                 <h3 className="text-sm font-semibold">Ajuda</h3>
               </div>
               <p className="text-xs leading-relaxed text-slate-600">{helpText(tab)}</p>
             </Card>
 
-            <Button variant="outline" className="w-full" onClick={() => setShowAllTabs(true)}>
+            <Button variant="outline" size="sm" className="w-full" onClick={() => setShowAllTabs(true)}>
               <LayoutGrid className="h-4 w-4" /> Ver todas as abas
             </Button>
           </aside>
@@ -249,8 +260,8 @@ function PacientesPage() {
                   {filtered.map(p => (
                     <tr key={p.id} className="border-t border-slate-200">
                       <td className="px-3 py-2 font-medium">{p.nomeCompleto || "(sem nome)"}</td>
-                      <td className="px-3 py-2">{p.cpf || "—"}</td>
-                      <td className="px-3 py-2">{p.celularPrincipal || "—"}</td>
+                      <td className="px-3 py-2">{p.cpf ? maskCPF(p.cpf) : "—"}</td>
+                      <td className="px-3 py-2">{p.celularPrincipal ? maskCelular(p.celularPrincipal) : "—"}</td>
                       <td className="px-3 py-2 text-right">
                         <Button size="sm" onClick={() => loadOne(p)}>Selecionar</Button>
                       </td>
@@ -323,10 +334,10 @@ function ActionBtn({
   return (
     <button
       onClick={onClick}
-      className={`flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm font-medium transition ${styles[color]}`}
+      className={`flex w-full items-center justify-between rounded-md border px-2.5 py-1.5 text-sm font-medium leading-tight transition ${styles[color]}`}
     >
-      <span className="flex items-center gap-2">{icon} {label}</span>
-      <span className="text-xs opacity-70">{hint}</span>
+      <span className="flex items-center gap-1.5">{icon}<span>{label}</span></span>
+      <span className="ml-1 rounded bg-white/60 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide opacity-80">{hint}</span>
     </button>
   );
 }
@@ -433,12 +444,12 @@ function TabIdentificacao({ p, upd, setP }: { p: Patient; upd: <K extends keyof 
             </div>
             <div className="grid gap-4 md:grid-cols-4">
               <Field label="CPF" required>
-                <Input value={p.cpf} placeholder="000.000.000-00"
-                  onChange={(e) => upd("cpf", e.target.value)} />
+                <CpfField value={p.cpf} onChange={(v) => upd("cpf", v)} />
               </Field>
               <Field label="RG">
-                <Input value={p.rg} placeholder="Digite o RG"
-                  onChange={(e) => upd("rg", e.target.value)} />
+                <MaskedInput value={p.rg} format={maskGroup3FromRight}
+                  placeholder="Digite o RG"
+                  onChange={(v) => upd("rg", v)} />
               </Field>
               <Field label="Órgão emissor">
                 <SimpleSelect value={p.orgaoEmissor} onChange={(v) => upd("orgaoEmissor", v)} options={ORGAOS_EMISSORES} />
@@ -450,16 +461,17 @@ function TabIdentificacao({ p, upd, setP }: { p: Patient; upd: <K extends keyof 
             </div>
             <div className="grid gap-4 md:grid-cols-3">
               <Field label="CNS (Cartão Nacional de Saúde)">
-                <Input value={p.cns} placeholder="Digite o CNS"
-                  onChange={(e) => upd("cns", e.target.value)} />
+                <CnsField value={p.cns} onChange={(v) => upd("cns", v)} />
               </Field>
               <Field label="AMA (Cartão do AMA)">
-                <Input value={p.ama} placeholder="Digite o nº do AMA"
-                  onChange={(e) => upd("ama", e.target.value)} />
+                <MaskedInput value={p.ama} format={maskGroup3FromRight}
+                  placeholder="Digite o nº do AMA"
+                  onChange={(v) => upd("ama", v)} />
               </Field>
               <Field label="NIS (Nº de Identificação Social)">
-                <Input value={p.nis} placeholder="Digite o NIS"
-                  onChange={(e) => upd("nis", e.target.value)} />
+                <MaskedInput value={p.nis} format={(d) => d} maxDigits={11}
+                  placeholder="Digite o NIS"
+                  onChange={(v) => upd("nis", v)} />
               </Field>
             </div>
           </div>
@@ -575,20 +587,24 @@ function TabContato({ p, upd, setP }: { p: Patient; upd: <K extends keyof Patien
       <Section icon={<Phone className="h-5 w-5" />} title="Telefones">
         <div className="grid gap-4 md:grid-cols-2">
           <Field label="Celular principal" required>
-            <Input value={p.celularPrincipal} placeholder="(11) 99999-9999"
-              onChange={(e) => upd("celularPrincipal", e.target.value)} />
+            <MaskedInput value={p.celularPrincipal} format={maskCelular} maxDigits={11}
+              placeholder="(11) 99999-9999"
+              onChange={(v) => upd("celularPrincipal", v)} />
           </Field>
           <Field label="Celular secundário">
-            <Input value={p.celularSecundario} placeholder="(11) 99999-9999"
-              onChange={(e) => upd("celularSecundario", e.target.value)} />
+            <MaskedInput value={p.celularSecundario} format={maskCelular} maxDigits={11}
+              placeholder="(11) 99999-9999"
+              onChange={(v) => upd("celularSecundario", v)} />
           </Field>
           <Field label="Telefone residencial">
-            <Input value={p.telefoneResidencial} placeholder="(11) 3333-3333"
-              onChange={(e) => upd("telefoneResidencial", e.target.value)} />
+            <MaskedInput value={p.telefoneResidencial} format={maskFixo} maxDigits={10}
+              placeholder="(11) 3333-3333"
+              onChange={(v) => upd("telefoneResidencial", v)} />
           </Field>
           <Field label="Telefone comercial">
-            <Input value={p.telefoneComercial} placeholder="(11) 2222-2222"
-              onChange={(e) => upd("telefoneComercial", e.target.value)} />
+            <MaskedInput value={p.telefoneComercial} format={maskFixo} maxDigits={10}
+              placeholder="(11) 2222-2222"
+              onChange={(v) => upd("telefoneComercial", v)} />
           </Field>
         </div>
       </Section>
@@ -671,11 +687,45 @@ function EnderecoFields({ value, onChange, includeCorrespondencia, p, setP }: {
   includeCorrespondencia?: boolean;
   p?: Patient; setP?: React.Dispatch<React.SetStateAction<Patient>>;
 }) {
+  const [cepLoading, setCepLoading] = useState(false);
+  const [cepError, setCepError] = useState<string | null>(null);
+
+  async function handleCepBlur(digits: string) {
+    if (digits.length !== 8) return;
+    setCepLoading(true);
+    setCepError(null);
+    const r = await fetchViaCep(digits);
+    setCepLoading(false);
+    if (!r) {
+      setCepError("CEP não encontrado. Preencha os dados manualmente.");
+      return;
+    }
+    onChange({
+      ...value,
+      cep: digits,
+      logradouro: r.logradouro || value.logradouro,
+      bairro: r.bairro || value.bairro,
+      cidade: r.localidade || value.cidade,
+      estado: r.uf || value.estado,
+    });
+  }
+
   return (
     <>
       <div className="grid gap-4 md:grid-cols-4">
         <Field label="CEP" required>
-          <Input value={value.cep} placeholder="00000-000" onChange={(e) => onChange({ ...value, cep: e.target.value })} />
+          <div className="relative">
+            <MaskedInput value={value.cep} format={maskCEP} maxDigits={8}
+              placeholder="00000-000"
+              onChange={(v) => { setCepError(null); onChange({ ...value, cep: v }); }}
+              onBlurDigits={handleCepBlur}
+              hint={cepError ?? undefined}
+              valid={cepError ? false : null}
+            />
+            {cepLoading && (
+              <Loader2 className="pointer-events-none absolute right-2 top-2 h-4 w-4 animate-spin text-slate-400" />
+            )}
+          </div>
         </Field>
         <Field label="Logradouro (Rua, Avenida, etc.)" required className="md:col-span-2">
           <Input value={value.logradouro} placeholder="Digite o logradouro"
@@ -782,11 +832,11 @@ function TabResponsavel({ p, setP }: { p: Patient; setP: React.Dispatch<React.Se
         </div>
         <div className="grid gap-4 md:grid-cols-4">
           <Field label="CPF" required>
-            <Input value={r.cpf} placeholder="000.000.000-00"
-              onChange={(e) => updRep("cpf", e.target.value)} />
+            <CpfField value={r.cpf} onChange={(v) => updRep("cpf", v)} />
           </Field>
           <Field label="RG">
-            <Input value={r.rg} onChange={(e) => updRep("rg", e.target.value)} />
+            <MaskedInput value={r.rg} format={maskGroup3FromRight}
+              onChange={(v) => updRep("rg", v)} />
           </Field>
           <Field label="Órgão emissor" required>
             <SimpleSelect value={r.orgaoEmissor} onChange={(v) => updRep("orgaoEmissor", v)} options={ORGAOS_EMISSORES} />
@@ -827,20 +877,24 @@ function TabResponsavel({ p, setP }: { p: Patient; setP: React.Dispatch<React.Se
       <Section icon={<Phone className="h-5 w-5" />} title="Contato">
         <div className="grid gap-4 md:grid-cols-4">
           <Field label="Celular principal" required>
-            <Input value={r.celularPrincipal} placeholder="(11) 99999-9999"
-              onChange={(e) => updRep("celularPrincipal", e.target.value)} />
+            <MaskedInput value={r.celularPrincipal} format={maskCelular} maxDigits={11}
+              placeholder="(11) 99999-9999"
+              onChange={(v) => updRep("celularPrincipal", v)} />
           </Field>
           <Field label="Celular secundário">
-            <Input value={r.celularSecundario} placeholder="(11) 99999-9999"
-              onChange={(e) => updRep("celularSecundario", e.target.value)} />
+            <MaskedInput value={r.celularSecundario} format={maskCelular} maxDigits={11}
+              placeholder="(11) 99999-9999"
+              onChange={(v) => updRep("celularSecundario", v)} />
           </Field>
           <Field label="Telefone residencial">
-            <Input value={r.telefoneResidencial} placeholder="(11) 3333-3333"
-              onChange={(e) => updRep("telefoneResidencial", e.target.value)} />
+            <MaskedInput value={r.telefoneResidencial} format={maskFixo} maxDigits={10}
+              placeholder="(11) 3333-3333"
+              onChange={(v) => updRep("telefoneResidencial", v)} />
           </Field>
           <Field label="Telefone comercial">
-            <Input value={r.telefoneComercial} placeholder="(11) 2222-2222"
-              onChange={(e) => updRep("telefoneComercial", e.target.value)} />
+            <MaskedInput value={r.telefoneComercial} format={maskFixo} maxDigits={10}
+              placeholder="(11) 2222-2222"
+              onChange={(v) => updRep("telefoneComercial", v)} />
           </Field>
         </div>
         <Field label="E-mail">
@@ -908,12 +962,14 @@ function TabEmergencia({ p, setP }: { p: Patient; setP: React.Dispatch<React.Set
               </div>
               <div className="grid gap-4 md:grid-cols-3">
                 <Field label="Telefone principal" required={c.principal}>
-                  <Input value={c.telefonePrincipal} placeholder="(11) 99999-9999"
-                    onChange={(e) => updContato(i, { telefonePrincipal: e.target.value })} />
+                  <MaskedInput value={c.telefonePrincipal} format={maskTelefoneSmart} maxDigits={11}
+                    placeholder="(11) 99999-9999"
+                    onChange={(v) => updContato(i, { telefonePrincipal: v })} />
                 </Field>
                 <Field label="Telefone alternativo">
-                  <Input value={c.telefoneAlternativo} placeholder="(11) 99999-9999"
-                    onChange={(e) => updContato(i, { telefoneAlternativo: e.target.value })} />
+                  <MaskedInput value={c.telefoneAlternativo} format={maskTelefoneSmart} maxDigits={11}
+                    placeholder="(11) 99999-9999"
+                    onChange={(v) => updContato(i, { telefoneAlternativo: v })} />
                 </Field>
                 <Field label="E-mail">
                   <Input type="email" value={c.email} placeholder="exemplo@email.com.br"
@@ -949,5 +1005,50 @@ function SimpleSelect({ value, onChange, options, placeholder = "Selecione" }: {
         {options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
       </SelectContent>
     </Select>
+  );
+}
+
+/* ----- CPF / CNS fields with live validation ----- */
+function CpfField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const digits = onlyDigits(value);
+  const complete = digits.length === 11;
+  const valid = complete ? validateCPF(digits) : null;
+  return (
+    <div className="relative">
+      <MaskedInput
+        value={value}
+        format={maskCPF}
+        maxDigits={11}
+        placeholder="000.000.000-00"
+        onChange={onChange}
+        valid={valid}
+        hint={complete && !valid ? "CPF inválido. Verifique os dígitos." : undefined}
+      />
+      {valid && (
+        <CheckCircle2 className="pointer-events-none absolute right-2 top-2 h-4 w-4 text-emerald-500" />
+      )}
+    </div>
+  );
+}
+
+function CnsField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const digits = onlyDigits(value);
+  const complete = digits.length === 15;
+  const valid = complete ? validateCNS(digits) : null;
+  return (
+    <div className="relative">
+      <MaskedInput
+        value={value}
+        format={maskCNS}
+        maxDigits={15}
+        placeholder="000.0000.0000.0000"
+        onChange={onChange}
+        valid={valid}
+        hint={complete && !valid ? "CNS inválido conforme regras do Ministério da Saúde." : undefined}
+      />
+      {valid && (
+        <CheckCircle2 className="pointer-events-none absolute right-2 top-2 h-4 w-4 text-emerald-500" />
+      )}
+    </div>
   );
 }
