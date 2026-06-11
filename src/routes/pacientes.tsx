@@ -334,10 +334,10 @@ function ActionBtn({
   return (
     <button
       onClick={onClick}
-      className={`flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm font-medium transition ${styles[color]}`}
+      className={`flex w-full items-center justify-between rounded-md border px-2.5 py-1.5 text-sm font-medium leading-tight transition ${styles[color]}`}
     >
-      <span className="flex items-center gap-2">{icon} {label}</span>
-      <span className="text-xs opacity-70">{hint}</span>
+      <span className="flex items-center gap-1.5">{icon}<span>{label}</span></span>
+      <span className="ml-1 rounded bg-white/60 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide opacity-80">{hint}</span>
     </button>
   );
 }
