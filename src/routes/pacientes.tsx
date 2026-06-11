@@ -1007,3 +1007,48 @@ function SimpleSelect({ value, onChange, options, placeholder = "Selecione" }: {
     </Select>
   );
 }
+
+/* ----- CPF / CNS fields with live validation ----- */
+function CpfField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const digits = onlyDigits(value);
+  const complete = digits.length === 11;
+  const valid = complete ? validateCPF(digits) : null;
+  return (
+    <div className="relative">
+      <MaskedInput
+        value={value}
+        format={maskCPF}
+        maxDigits={11}
+        placeholder="000.000.000-00"
+        onChange={onChange}
+        valid={valid}
+        hint={complete && !valid ? "CPF inválido. Verifique os dígitos." : undefined}
+      />
+      {valid && (
+        <CheckCircle2 className="pointer-events-none absolute right-2 top-2 h-4 w-4 text-emerald-500" />
+      )}
+    </div>
+  );
+}
+
+function CnsField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const digits = onlyDigits(value);
+  const complete = digits.length === 15;
+  const valid = complete ? validateCNS(digits) : null;
+  return (
+    <div className="relative">
+      <MaskedInput
+        value={value}
+        format={maskCNS}
+        maxDigits={15}
+        placeholder="000.0000.0000.0000"
+        onChange={onChange}
+        valid={valid}
+        hint={complete && !valid ? "CNS inválido conforme regras do Ministério da Saúde." : undefined}
+      />
+      {valid && (
+        <CheckCircle2 className="pointer-events-none absolute right-2 top-2 h-4 w-4 text-emerald-500" />
+      )}
+    </div>
+  );
+}
