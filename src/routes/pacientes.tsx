@@ -192,28 +192,28 @@ function PacientesPage() {
             {tab === 5 && <TabEmergencia p={patient} setP={setPatient} />}
           </div>
 
-          {/* Right side action panel */}
-          <aside className="space-y-5">
-            <Card className="border-slate-200 p-4">
-              <h3 className="mb-3 text-base font-semibold text-slate-700">Ações</h3>
-              <div className="space-y-2">
+          {/* Right side action panel (sticky) */}
+          <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+            <Card className="border-slate-200 p-3">
+              <h3 className="mb-2 text-sm font-semibold text-slate-700">Ações</h3>
+              <div className="space-y-1.5">
                 <ActionBtn onClick={doSave} color="emerald" icon={<Save className="h-4 w-4" />} label="Salvar" hint="F2" />
                 <ActionBtn onClick={doClear} color="rose" icon={<Eraser className="h-4 w-4" />} label="Limpar" hint="F3" />
-                <ActionBtn onClick={doDelete} color="amber" icon={<Trash2 className="h-4 w-4" />} label="Apagar Contato" hint="F4" />
+                <ActionBtn onClick={doDelete} color="amber" icon={<Trash2 className="h-4 w-4" />} label="Apagar" hint="F4" />
                 <ActionBtn onClick={() => setTab(t => Math.min(5, t + 1))} color="sky" icon={<ArrowRight className="h-4 w-4" />} label="Próximo" hint="F5" variant="outline" />
-                <ActionBtn onClick={() => setTab(t => Math.max(1, t - 1))} color="sky" icon={<ArrowLeft className="h-4 w-4" />} label="Anterior / Voltar" hint="F6" variant="outline" />
+                <ActionBtn onClick={() => setTab(t => Math.max(1, t - 1))} color="sky" icon={<ArrowLeft className="h-4 w-4" />} label="Anterior" hint="F6" variant="outline" />
               </div>
             </Card>
 
-            <Card className="border-amber-200 bg-amber-50/50 p-4">
-              <div className="mb-2 flex items-center gap-2 text-amber-700">
+            <Card className="border-amber-200 bg-amber-50/50 p-3">
+              <div className="mb-1.5 flex items-center gap-2 text-amber-700">
                 <HelpCircle className="h-4 w-4" />
                 <h3 className="text-sm font-semibold">Ajuda</h3>
               </div>
               <p className="text-xs leading-relaxed text-slate-600">{helpText(tab)}</p>
             </Card>
 
-            <Button variant="outline" className="w-full" onClick={() => setShowAllTabs(true)}>
+            <Button variant="outline" size="sm" className="w-full" onClick={() => setShowAllTabs(true)}>
               <LayoutGrid className="h-4 w-4" /> Ver todas as abas
             </Button>
           </aside>
