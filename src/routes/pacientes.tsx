@@ -73,11 +73,12 @@ function PacientesPage() {
   const filtered = useMemo(() => {
     const t = searchTerm.trim().toLowerCase();
     if (!t) return list;
+    const td = onlyDigits(t);
     return list.filter(p =>
       p.nomeCompleto.toLowerCase().includes(t) ||
-      p.cpf.toLowerCase().includes(t) ||
-      p.cns.toLowerCase().includes(t) ||
-      p.celularPrincipal.toLowerCase().includes(t) ||
+      (td && onlyDigits(p.cpf).includes(td)) ||
+      (td && onlyDigits(p.cns).includes(td)) ||
+      (td && onlyDigits(p.celularPrincipal).includes(td)) ||
       p.emailPrincipal.toLowerCase().includes(t),
     );
   }, [list, searchTerm]);
@@ -91,7 +92,12 @@ function PacientesPage() {
   function doSave() {
     if (!session) return;
     if (!patient.nomeCompleto.trim()) { toast.error("Informe o nome completo do paciente."); return; }
-    if (!patient.cpf.trim()) { toast.error("Informe o CPF do paciente."); return; }
+    const cpfDigits = onlyDigits(patient.cpf);
+    if (!cpfDigits) { toast.error("Informe o CPF do paciente."); return; }
+    if (!validateCPF(cpfDigits)) { toast.error("CPF inválido. Verifique os dígitos."); return; }
+    if (patient.cns && !validateCNS(patient.cns)) {
+      toast.error("CNS inválido. Verifique o número do Cartão SUS."); return;
+    }
     const now = new Date().toISOString();
     const exists = list.some(p => p.id === patient.id);
     const updated = exists
