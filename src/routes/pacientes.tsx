@@ -877,20 +877,24 @@ function TabResponsavel({ p, setP }: { p: Patient; setP: React.Dispatch<React.Se
       <Section icon={<Phone className="h-5 w-5" />} title="Contato">
         <div className="grid gap-4 md:grid-cols-4">
           <Field label="Celular principal" required>
-            <Input value={r.celularPrincipal} placeholder="(11) 99999-9999"
-              onChange={(e) => updRep("celularPrincipal", e.target.value)} />
+            <MaskedInput value={r.celularPrincipal} format={maskCelular} maxDigits={11}
+              placeholder="(11) 99999-9999"
+              onChange={(v) => updRep("celularPrincipal", v)} />
           </Field>
           <Field label="Celular secundário">
-            <Input value={r.celularSecundario} placeholder="(11) 99999-9999"
-              onChange={(e) => updRep("celularSecundario", e.target.value)} />
+            <MaskedInput value={r.celularSecundario} format={maskCelular} maxDigits={11}
+              placeholder="(11) 99999-9999"
+              onChange={(v) => updRep("celularSecundario", v)} />
           </Field>
           <Field label="Telefone residencial">
-            <Input value={r.telefoneResidencial} placeholder="(11) 3333-3333"
-              onChange={(e) => updRep("telefoneResidencial", e.target.value)} />
+            <MaskedInput value={r.telefoneResidencial} format={maskFixo} maxDigits={10}
+              placeholder="(11) 3333-3333"
+              onChange={(v) => updRep("telefoneResidencial", v)} />
           </Field>
           <Field label="Telefone comercial">
-            <Input value={r.telefoneComercial} placeholder="(11) 2222-2222"
-              onChange={(e) => updRep("telefoneComercial", e.target.value)} />
+            <MaskedInput value={r.telefoneComercial} format={maskFixo} maxDigits={10}
+              placeholder="(11) 2222-2222"
+              onChange={(v) => updRep("telefoneComercial", v)} />
           </Field>
         </div>
         <Field label="E-mail">
