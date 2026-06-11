@@ -687,11 +687,45 @@ function EnderecoFields({ value, onChange, includeCorrespondencia, p, setP }: {
   includeCorrespondencia?: boolean;
   p?: Patient; setP?: React.Dispatch<React.SetStateAction<Patient>>;
 }) {
+  const [cepLoading, setCepLoading] = useState(false);
+  const [cepError, setCepError] = useState<string | null>(null);
+
+  async function handleCepBlur(digits: string) {
+    if (digits.length !== 8) return;
+    setCepLoading(true);
+    setCepError(null);
+    const r = await fetchViaCep(digits);
+    setCepLoading(false);
+    if (!r) {
+      setCepError("CEP não encontrado. Preencha os dados manualmente.");
+      return;
+    }
+    onChange({
+      ...value,
+      cep: digits,
+      logradouro: r.logradouro || value.logradouro,
+      bairro: r.bairro || value.bairro,
+      cidade: r.localidade || value.cidade,
+      estado: r.uf || value.estado,
+    });
+  }
+
   return (
     <>
       <div className="grid gap-4 md:grid-cols-4">
         <Field label="CEP" required>
-          <Input value={value.cep} placeholder="00000-000" onChange={(e) => onChange({ ...value, cep: e.target.value })} />
+          <div className="relative">
+            <MaskedInput value={value.cep} format={maskCEP} maxDigits={8}
+              placeholder="00000-000"
+              onChange={(v) => { setCepError(null); onChange({ ...value, cep: v }); }}
+              onBlurDigits={handleCepBlur}
+              hint={cepError ?? undefined}
+              valid={cepError ? false : null}
+            />
+            {cepLoading && (
+              <Loader2 className="pointer-events-none absolute right-2 top-2 h-4 w-4 animate-spin text-slate-400" />
+            )}
+          </div>
         </Field>
         <Field label="Logradouro (Rua, Avenida, etc.)" required className="md:col-span-2">
           <Input value={value.logradouro} placeholder="Digite o logradouro"
