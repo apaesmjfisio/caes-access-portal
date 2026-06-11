@@ -444,12 +444,12 @@ function TabIdentificacao({ p, upd, setP }: { p: Patient; upd: <K extends keyof 
             </div>
             <div className="grid gap-4 md:grid-cols-4">
               <Field label="CPF" required>
-                <Input value={p.cpf} placeholder="000.000.000-00"
-                  onChange={(e) => upd("cpf", e.target.value)} />
+                <CpfField value={p.cpf} onChange={(v) => upd("cpf", v)} />
               </Field>
               <Field label="RG">
-                <Input value={p.rg} placeholder="Digite o RG"
-                  onChange={(e) => upd("rg", e.target.value)} />
+                <MaskedInput value={p.rg} format={maskGroup3FromRight}
+                  placeholder="Digite o RG"
+                  onChange={(v) => upd("rg", v)} />
               </Field>
               <Field label="Órgão emissor">
                 <SimpleSelect value={p.orgaoEmissor} onChange={(v) => upd("orgaoEmissor", v)} options={ORGAOS_EMISSORES} />
@@ -461,16 +461,17 @@ function TabIdentificacao({ p, upd, setP }: { p: Patient; upd: <K extends keyof 
             </div>
             <div className="grid gap-4 md:grid-cols-3">
               <Field label="CNS (Cartão Nacional de Saúde)">
-                <Input value={p.cns} placeholder="Digite o CNS"
-                  onChange={(e) => upd("cns", e.target.value)} />
+                <CnsField value={p.cns} onChange={(v) => upd("cns", v)} />
               </Field>
               <Field label="AMA (Cartão do AMA)">
-                <Input value={p.ama} placeholder="Digite o nº do AMA"
-                  onChange={(e) => upd("ama", e.target.value)} />
+                <MaskedInput value={p.ama} format={maskGroup3FromRight}
+                  placeholder="Digite o nº do AMA"
+                  onChange={(v) => upd("ama", v)} />
               </Field>
               <Field label="NIS (Nº de Identificação Social)">
-                <Input value={p.nis} placeholder="Digite o NIS"
-                  onChange={(e) => upd("nis", e.target.value)} />
+                <MaskedInput value={p.nis} format={(d) => d} maxDigits={11}
+                  placeholder="Digite o NIS"
+                  onChange={(v) => upd("nis", v)} />
               </Field>
             </div>
           </div>
