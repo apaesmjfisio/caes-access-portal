@@ -587,20 +587,24 @@ function TabContato({ p, upd, setP }: { p: Patient; upd: <K extends keyof Patien
       <Section icon={<Phone className="h-5 w-5" />} title="Telefones">
         <div className="grid gap-4 md:grid-cols-2">
           <Field label="Celular principal" required>
-            <Input value={p.celularPrincipal} placeholder="(11) 99999-9999"
-              onChange={(e) => upd("celularPrincipal", e.target.value)} />
+            <MaskedInput value={p.celularPrincipal} format={maskCelular} maxDigits={11}
+              placeholder="(11) 99999-9999"
+              onChange={(v) => upd("celularPrincipal", v)} />
           </Field>
           <Field label="Celular secundário">
-            <Input value={p.celularSecundario} placeholder="(11) 99999-9999"
-              onChange={(e) => upd("celularSecundario", e.target.value)} />
+            <MaskedInput value={p.celularSecundario} format={maskCelular} maxDigits={11}
+              placeholder="(11) 99999-9999"
+              onChange={(v) => upd("celularSecundario", v)} />
           </Field>
           <Field label="Telefone residencial">
-            <Input value={p.telefoneResidencial} placeholder="(11) 3333-3333"
-              onChange={(e) => upd("telefoneResidencial", e.target.value)} />
+            <MaskedInput value={p.telefoneResidencial} format={maskFixo} maxDigits={10}
+              placeholder="(11) 3333-3333"
+              onChange={(v) => upd("telefoneResidencial", v)} />
           </Field>
           <Field label="Telefone comercial">
-            <Input value={p.telefoneComercial} placeholder="(11) 2222-2222"
-              onChange={(e) => upd("telefoneComercial", e.target.value)} />
+            <MaskedInput value={p.telefoneComercial} format={maskFixo} maxDigits={10}
+              placeholder="(11) 2222-2222"
+              onChange={(v) => upd("telefoneComercial", v)} />
           </Field>
         </div>
       </Section>
