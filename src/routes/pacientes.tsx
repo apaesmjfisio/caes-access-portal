@@ -65,6 +65,18 @@ function PacientesPage() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
+  const filtered = useMemo(() => {
+    const t = searchTerm.trim().toLowerCase();
+    if (!t) return list;
+    return list.filter(p =>
+      p.nomeCompleto.toLowerCase().includes(t) ||
+      p.cpf.toLowerCase().includes(t) ||
+      p.cns.toLowerCase().includes(t) ||
+      p.celularPrincipal.toLowerCase().includes(t) ||
+      p.emailPrincipal.toLowerCase().includes(t),
+    );
+  }, [list, searchTerm]);
+
   if (!session) return null;
 
   function upd<K extends keyof Patient>(k: K, v: Patient[K]) {
@@ -116,17 +128,6 @@ function PacientesPage() {
 
   function close() { navigate({ to: "/app" }); }
 
-  const filtered = useMemo(() => {
-    const t = searchTerm.trim().toLowerCase();
-    if (!t) return list;
-    return list.filter(p =>
-      p.nomeCompleto.toLowerCase().includes(t) ||
-      p.cpf.toLowerCase().includes(t) ||
-      p.cns.toLowerCase().includes(t) ||
-      p.celularPrincipal.toLowerCase().includes(t) ||
-      p.emailPrincipal.toLowerCase().includes(t),
-    );
-  }, [list, searchTerm]);
 
   return (
     <div className="min-h-screen bg-slate-50">
