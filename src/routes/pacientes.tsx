@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   X, Save, Eraser, Trash2, ArrowRight, ArrowLeft, Search, Camera, Plus,
   User, Phone, MapPin, UserPlus, Star, HelpCircle, FileText, Info, Mail, MessageSquare,
-  LayoutGrid,
+  LayoutGrid, CheckCircle2, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,11 @@ import {
   TIPOS_SANGUINEOS, FATORES_RH, ETNIAS, RELIGIOES, ORGAOS_EMISSORES, PARENTESCOS,
   type Patient, type Endereco, type Documento, type ContatoEmergencia,
 } from "@/lib/patients-store";
+import { MaskedInput } from "@/components/MaskedInput";
+import {
+  maskCPF, validateCPF, maskGroup3FromRight, maskCNS, validateCNS,
+  maskCelular, maskFixo, maskTelefoneSmart, maskCEP, fetchViaCep, onlyDigits,
+} from "@/lib/masks";
 
 export const Route = createFileRoute("/pacientes")({
   head: () => ({ meta: [{ title: "Cadastro de Pacientes — CAES" }] }),
