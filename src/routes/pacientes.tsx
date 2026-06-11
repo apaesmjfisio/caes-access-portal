@@ -962,12 +962,14 @@ function TabEmergencia({ p, setP }: { p: Patient; setP: React.Dispatch<React.Set
               </div>
               <div className="grid gap-4 md:grid-cols-3">
                 <Field label="Telefone principal" required={c.principal}>
-                  <Input value={c.telefonePrincipal} placeholder="(11) 99999-9999"
-                    onChange={(e) => updContato(i, { telefonePrincipal: e.target.value })} />
+                  <MaskedInput value={c.telefonePrincipal} format={maskTelefoneSmart} maxDigits={11}
+                    placeholder="(11) 99999-9999"
+                    onChange={(v) => updContato(i, { telefonePrincipal: v })} />
                 </Field>
                 <Field label="Telefone alternativo">
-                  <Input value={c.telefoneAlternativo} placeholder="(11) 99999-9999"
-                    onChange={(e) => updContato(i, { telefoneAlternativo: e.target.value })} />
+                  <MaskedInput value={c.telefoneAlternativo} format={maskTelefoneSmart} maxDigits={11}
+                    placeholder="(11) 99999-9999"
+                    onChange={(v) => updContato(i, { telefoneAlternativo: v })} />
                 </Field>
                 <Field label="E-mail">
                   <Input type="email" value={c.email} placeholder="exemplo@email.com.br"
