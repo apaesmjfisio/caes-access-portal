@@ -260,8 +260,8 @@ function PacientesPage() {
                   {filtered.map(p => (
                     <tr key={p.id} className="border-t border-slate-200">
                       <td className="px-3 py-2 font-medium">{p.nomeCompleto || "(sem nome)"}</td>
-                      <td className="px-3 py-2">{p.cpf || "—"}</td>
-                      <td className="px-3 py-2">{p.celularPrincipal || "—"}</td>
+                      <td className="px-3 py-2">{p.cpf ? maskCPF(p.cpf) : "—"}</td>
+                      <td className="px-3 py-2">{p.celularPrincipal ? maskCelular(p.celularPrincipal) : "—"}</td>
                       <td className="px-3 py-2 text-right">
                         <Button size="sm" onClick={() => loadOne(p)}>Selecionar</Button>
                       </td>
