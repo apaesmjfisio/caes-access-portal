@@ -832,11 +832,11 @@ function TabResponsavel({ p, setP }: { p: Patient; setP: React.Dispatch<React.Se
         </div>
         <div className="grid gap-4 md:grid-cols-4">
           <Field label="CPF" required>
-            <Input value={r.cpf} placeholder="000.000.000-00"
-              onChange={(e) => updRep("cpf", e.target.value)} />
+            <CpfField value={r.cpf} onChange={(v) => updRep("cpf", v)} />
           </Field>
           <Field label="RG">
-            <Input value={r.rg} onChange={(e) => updRep("rg", e.target.value)} />
+            <MaskedInput value={r.rg} format={maskGroup3FromRight}
+              onChange={(v) => updRep("rg", v)} />
           </Field>
           <Field label="Órgão emissor" required>
             <SimpleSelect value={r.orgaoEmissor} onChange={(v) => updRep("orgaoEmissor", v)} options={ORGAOS_EMISSORES} />
