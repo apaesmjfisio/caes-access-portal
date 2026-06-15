@@ -320,6 +320,7 @@ function helpText(tab: number) {
     case 3: return "Preencha os campos com o endereço residencial do paciente. Selecione a opção de correspondência caso seja diferente.";
     case 4: return "Informe os dados completos do representante legal. Essas informações poderão ser utilizadas para autorizações, assinaturas e contatos oficiais.";
     case 5: return "Informe pelo menos um contato de emergência. Essas informações são confidenciais e utilizadas apenas em situações necessárias.";
+    case 6: return "Cadastre todos os diagnósticos conhecidos do paciente (CID-10 ou CID-11). Utilize o botão de histórico (⏱) para visualizar alterações realizadas no diagnóstico.";
     default: return "";
   }
 }
