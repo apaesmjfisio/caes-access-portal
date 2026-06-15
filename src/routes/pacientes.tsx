@@ -3,8 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import {
   X, Save, Eraser, Trash2, ArrowRight, ArrowLeft, Search, Camera, Plus,
   User, Phone, MapPin, UserPlus, Star, HelpCircle, FileText, Info, Mail, MessageSquare,
-  LayoutGrid, CheckCircle2, Loader2,
+  LayoutGrid, CheckCircle2, Loader2, Stethoscope,
 } from "lucide-react";
+import { TabDiagnosticos } from "@/components/TabDiagnosticos";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +40,10 @@ const TABS = [
   { id: 3, label: "3. Endereço", icon: MapPin },
   { id: 4, label: "4. Responsável Legal", icon: UserPlus },
   { id: 5, label: "5. Emergência", icon: Star },
+  { id: 6, label: "6. Diagnósticos", icon: Stethoscope },
 ] as const;
+
+const MAX_TAB = 6;
 
 function PacientesPage() {
   const navigate = useNavigate();
@@ -63,7 +67,7 @@ function PacientesPage() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "F2") { e.preventDefault(); doSave(); }
       else if (e.key === "F3") { e.preventDefault(); doClear(); }
-      else if (e.key === "F5") { e.preventDefault(); setTab(t => Math.min(5, t + 1)); }
+      else if (e.key === "F5") { e.preventDefault(); setTab(t => Math.min(MAX_TAB, t + 1)); }
       else if (e.key === "F6") { e.preventDefault(); setTab(t => Math.max(1, t - 1)); }
     };
     window.addEventListener("keydown", onKey);
@@ -190,6 +194,16 @@ function PacientesPage() {
             {tab === 3 && <TabEndereco p={patient} setP={setPatient} />}
             {tab === 4 && <TabResponsavel p={patient} setP={setPatient} />}
             {tab === 5 && <TabEmergencia p={patient} setP={setPatient} />}
+            {tab === 6 && (
+              <TabDiagnosticos
+                diagnoses={patient.diagnoses ?? []}
+                documents={patient.diagnosisDocs ?? []}
+                currentUser={session.login}
+                onChange={({ diagnoses, documents }) =>
+                  setPatient(prev => ({ ...prev, diagnoses, diagnosisDocs: documents }))
+                }
+              />
+            )}
           </div>
 
           {/* Right side action panel (sticky) */}
@@ -200,7 +214,7 @@ function PacientesPage() {
                 <ActionBtn onClick={doSave} color="emerald" icon={<Save className="h-4 w-4" />} label="Salvar" hint="F2" />
                 <ActionBtn onClick={doClear} color="rose" icon={<Eraser className="h-4 w-4" />} label="Limpar" hint="F3" />
                 <ActionBtn onClick={doDelete} color="amber" icon={<Trash2 className="h-4 w-4" />} label="Apagar" hint="F4" />
-                <ActionBtn onClick={() => setTab(t => Math.min(5, t + 1))} color="sky" icon={<ArrowRight className="h-4 w-4" />} label="Próximo" hint="F5" variant="outline" />
+                <ActionBtn onClick={() => setTab(t => Math.min(MAX_TAB, t + 1))} color="sky" icon={<ArrowRight className="h-4 w-4" />} label="Próximo" hint="F5" variant="outline" />
                 <ActionBtn onClick={() => setTab(t => Math.max(1, t - 1))} color="sky" icon={<ArrowLeft className="h-4 w-4" />} label="Anterior" hint="F6" variant="outline" />
               </div>
             </Card>
@@ -306,6 +320,7 @@ function helpText(tab: number) {
     case 3: return "Preencha os campos com o endereço residencial do paciente. Selecione a opção de correspondência caso seja diferente.";
     case 4: return "Informe os dados completos do representante legal. Essas informações poderão ser utilizadas para autorizações, assinaturas e contatos oficiais.";
     case 5: return "Informe pelo menos um contato de emergência. Essas informações são confidenciais e utilizadas apenas em situações necessárias.";
+    case 6: return "Cadastre todos os diagnósticos conhecidos do paciente (CID-10 ou CID-11). Utilize o botão de histórico (⏱) para visualizar alterações realizadas no diagnóstico.";
     default: return "";
   }
 }
