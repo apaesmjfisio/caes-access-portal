@@ -162,6 +162,8 @@ export function emptyPatient(): Patient {
       mesmoEndereco:false, endereco: emptyEndereco(),
     },
     contatosEmergencia: [emptyContatoEmergencia(true)],
+    diagnoses: [],
+    diagnosisDocs: [],
   };
 }
 
