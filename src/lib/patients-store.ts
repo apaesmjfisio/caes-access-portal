@@ -1,4 +1,6 @@
 // Patient registry — local storage scoped per user (login).
+import type { Diagnosis, DiagnosisDoc } from "@/lib/diagnoses-store";
+
 export type Documento = {
   tipo: string;
   numero: string;
@@ -106,6 +108,10 @@ export type Patient = {
 
   // 5. Emergência
   contatosEmergencia: ContatoEmergencia[];
+
+  // 6. Diagnósticos (CID-10 / CID-11)
+  diagnoses: Diagnosis[];
+  diagnosisDocs: DiagnosisDoc[];
 };
 
 const KEY = (login: string) => `caes.patients.${login}`;
