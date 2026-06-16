@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Stethoscope, Plus, Pencil, Clock, Trash2, Search, Paperclip, Download, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -35,10 +35,18 @@ export function TabDiagnosticos({ diagnoses, documents, onChange, currentUser }:
   const fileInput = useRef<HTMLInputElement>(null);
   const [docCidLink, setDocCidLink] = useState<string>("");
 
-  const suggestions: CidEntry[] = useMemo(
-    () => searchCid(sistema, codigo || descricao),
-    [sistema, codigo, descricao],
-  );
+  const [suggestions, setSuggestions] = useState<CidEntry[]>([]);
+  const [loadingSug, setLoadingSug] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingSug(true);
+    searchCid(sistema, codigo || descricao)
+      .then((r) => { if (!cancelled) setSuggestions(r); })
+      .finally(() => { if (!cancelled) setLoadingSug(false); });
+    return () => { cancelled = true; };
+  }, [sistema, codigo, descricao]);
+
 
   function pickSuggestion(c: CidEntry) {
     setCodigo(c.codigo);
@@ -185,8 +193,8 @@ export function TabDiagnosticos({ diagnoses, documents, onChange, currentUser }:
                 onChange={(e) => { setDescricao(e.target.value); setOpenSuggest(true); }}
                 onFocus={() => setOpenSuggest(true)}
                 className="pr-8"
-                readOnly
               />
+
               <Search className="pointer-events-none absolute right-2 top-2 h-4 w-4 text-slate-400" />
             </div>
             {openSuggest && suggestions.length > 0 && (

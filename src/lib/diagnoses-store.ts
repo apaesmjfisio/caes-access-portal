@@ -39,51 +39,49 @@ export const STATUS_COLOR: Record<DiagnosisStatus, string> = {
   "Recidiva": "bg-rose-100 text-rose-700 border-rose-200",
 };
 
-// Pequeno catálogo de CIDs frequentes para autocomplete.
+// Catálogo de CIDs carregado sob demanda a partir de src/lib/cid-data.json
+// (gerado por scripts/build-cid-data.mjs a partir dos CSVs oficiais).
 export type CidEntry = { sistema: CidSystem; codigo: string; descricao: string };
-export const CID_CATALOG: CidEntry[] = [
-  // CID-10 (amostra ortopédica / clínica frequente)
-  { sistema: "CID-10", codigo: "M54.5", descricao: "Dor lombar baixa" },
-  { sistema: "CID-10", codigo: "M54.4", descricao: "Lumbago com ciática" },
-  { sistema: "CID-10", codigo: "M54.2", descricao: "Cervicalgia" },
-  { sistema: "CID-10", codigo: "M54.1", descricao: "Radiculopatia" },
-  { sistema: "CID-10", codigo: "M51.1", descricao: "Transtornos de discos lombares e de outros discos com radiculopatia" },
-  { sistema: "CID-10", codigo: "M50.1", descricao: "Transtornos de discos cervicais com radiculopatia" },
-  { sistema: "CID-10", codigo: "M75.0", descricao: "Capsulite adesiva do ombro" },
-  { sistema: "CID-10", codigo: "M17.0", descricao: "Gonartrose primária bilateral" },
-  { sistema: "CID-10", codigo: "M25.5", descricao: "Dor articular" },
-  { sistema: "CID-10", codigo: "M19.9", descricao: "Artrose não especificada" },
-  { sistema: "CID-10", codigo: "M62.6", descricao: "Distensão muscular" },
-  { sistema: "CID-10", codigo: "M79.7", descricao: "Fibromialgia" },
-  { sistema: "CID-10", codigo: "S83.5", descricao: "Entorse e distensão envolvendo o ligamento cruzado do joelho" },
-  { sistema: "CID-10", codigo: "I10", descricao: "Hipertensão essencial (primária)" },
-  { sistema: "CID-10", codigo: "E11.9", descricao: "Diabetes mellitus tipo 2 sem complicações" },
-  { sistema: "CID-10", codigo: "E66.9", descricao: "Obesidade não especificada" },
-  { sistema: "CID-10", codigo: "F32.9", descricao: "Episódio depressivo não especificado" },
-  { sistema: "CID-10", codigo: "F41.1", descricao: "Ansiedade generalizada" },
-  { sistema: "CID-10", codigo: "G43.9", descricao: "Enxaqueca não especificada" },
-  { sistema: "CID-10", codigo: "J45.9", descricao: "Asma não especificada" },
-  // CID-11 (amostra)
-  { sistema: "CID-11", codigo: "MG30.2", descricao: "Dor lombar crônica" },
-  { sistema: "CID-11", codigo: "ME84.2", descricao: "Cervicalgia" },
-  { sistema: "CID-11", codigo: "NE52.1", descricao: "Radiculopatia lombar" },
-  { sistema: "CID-11", codigo: "FA00.0", descricao: "Osteoartrite do joelho" },
-  { sistema: "CID-11", codigo: "FB56.0", descricao: "Capsulite adesiva do ombro" },
-  { sistema: "CID-11", codigo: "BA00", descricao: "Hipertensão essencial" },
-  { sistema: "CID-11", codigo: "5A11", descricao: "Diabetes mellitus tipo 2" },
-  { sistema: "CID-11", codigo: "6A70", descricao: "Episódio depressivo único" },
-  { sistema: "CID-11", codigo: "6B00", descricao: "Transtorno de ansiedade generalizada" },
-  { sistema: "CID-11", codigo: "8A80", descricao: "Enxaqueca" },
-];
 
-export function searchCid(sistema: CidSystem, term: string): CidEntry[] {
-  const t = term.trim().toLowerCase();
-  if (!t) return CID_CATALOG.filter(c => c.sistema === sistema).slice(0, 10);
-  return CID_CATALOG
-    .filter(c => c.sistema === sistema)
-    .filter(c =>
-      c.codigo.toLowerCase().includes(t) ||
-      c.descricao.toLowerCase().includes(t),
-    )
-    .slice(0, 12);
+type RawEntry = { s: 10 | 11; c: string; d: string };
+let _cache: CidEntry[] | null = null;
+let _loading: Promise<CidEntry[]> | null = null;
+
+export async function loadCidCatalog(): Promise<CidEntry[]> {
+  if (_cache) return _cache;
+  if (_loading) return _loading;
+  _loading = (async () => {
+    const mod = await import("./cid-data.json");
+    const raw = (mod.default ?? mod) as RawEntry[];
+    _cache = raw.map((r) => ({
+      sistema: r.s === 10 ? "CID-10" : "CID-11",
+      codigo: r.c,
+      descricao: r.d,
+    }));
+    return _cache;
+  })();
+  return _loading;
 }
+
+export async function searchCid(sistema: CidSystem, term: string): Promise<CidEntry[]> {
+  const catalog = await loadCidCatalog();
+  const t = term.trim().toLowerCase();
+  const same = catalog.filter((c) => c.sistema === sistema);
+  if (!t) return same.slice(0, 50);
+  const scored: { e: CidEntry; rank: number }[] = [];
+  for (const e of same) {
+    const code = e.codigo.toLowerCase();
+    const desc = e.descricao.toLowerCase();
+    let rank = -1;
+    if (code === t) rank = 0;
+    else if (code.startsWith(t)) rank = 1;
+    else if (code.includes(t)) rank = 2;
+    else if (desc.startsWith(t)) rank = 3;
+    else if (desc.includes(t)) rank = 4;
+    if (rank >= 0) scored.push({ e, rank });
+    if (scored.length > 800) break;
+  }
+  scored.sort((a, b) => a.rank - b.rank || a.e.codigo.localeCompare(b.e.codigo));
+  return scored.slice(0, 50).map((s) => s.e);
+}
+
