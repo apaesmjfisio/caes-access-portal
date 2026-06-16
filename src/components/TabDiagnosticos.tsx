@@ -193,7 +193,7 @@ export function TabDiagnosticos({ diagnoses, documents, onChange, currentUser }:
                 onChange={(e) => { setDescricao(e.target.value); setOpenSuggest(true); }}
                 onFocus={() => setOpenSuggest(true)}
                 className="pr-8"
-                readOnly
+                />
               />
               <Search className="pointer-events-none absolute right-2 top-2 h-4 w-4 text-slate-400" />
             </div>
