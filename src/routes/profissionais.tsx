@@ -19,7 +19,7 @@ import logoApae from "@/assets/logo-apae.png";
 import bgImage from "@/assets/bg-configuracoes.jpg";
 import { getSession, type Session } from "@/lib/auth";
 import { MaskedInput } from "@/components/MaskedInput";
-import { maskCPF, validateCPF, maskCEP, maskPhone, onlyDigits } from "@/lib/masks";
+import { maskCPF, validateCPF, maskCEP, maskTelefoneSmart, onlyDigits } from "@/lib/masks";
 import {
   loadProfessionals, saveProfessionals, emptyProfessional,
   UFS, SEXOS, ESTADOS_CIVIS, PROFISSOES, PROFISSAO_TO_CONSELHO,
@@ -517,8 +517,8 @@ function ProfessionalForm({
             <Input value={p.nome} onChange={(e) => upd("nome", e.target.value)} />
           </Field>
           <Field label="CPF" required hint={!cpfValid ? "CPF inválido" : undefined} hintColor="rose">
-            <MaskedInput value={p.cpf} onChangeValue={(v) => upd("cpf", v)}
-              mask={maskCPF} placeholder="000.000.000-00" inputMode="numeric" />
+            <MaskedInput value={p.cpf} onChange={(v) => upd("cpf", v)}
+              format={maskCPF} placeholder="000.000.000-00" inputMode="numeric" />
           </Field>
         </div>
         <div className="grid gap-4 md:grid-cols-4">
@@ -549,18 +549,18 @@ function ProfessionalForm({
             <Input type="email" value={p.email} onChange={(e) => upd("email", e.target.value)} />
           </Field>
           <Field label="Telefone Celular" required>
-            <MaskedInput value={p.celular} onChangeValue={(v) => upd("celular", v)}
-              mask={maskPhone} placeholder="(00) 00000-0000" inputMode="tel" />
+            <MaskedInput value={p.celular} onChange={(v) => upd("celular", v)}
+              format={maskTelefoneSmart} placeholder="(00) 00000-0000" inputMode="tel" />
           </Field>
           <Field label="Telefone Secundário">
-            <MaskedInput value={p.telefoneSecundario} onChangeValue={(v) => upd("telefoneSecundario", v)}
-              mask={maskPhone} placeholder="(00) 00000-0000" inputMode="tel" />
+            <MaskedInput value={p.telefoneSecundario} onChange={(v) => upd("telefoneSecundario", v)}
+              format={maskTelefoneSmart} placeholder="(00) 00000-0000" inputMode="tel" />
           </Field>
         </div>
         <div className="grid gap-4 md:grid-cols-4">
           <Field label="CEP">
-            <MaskedInput value={p.cep} onChangeValue={(v) => upd("cep", v)}
-              mask={maskCEP} placeholder="00000-000" inputMode="numeric" />
+            <MaskedInput value={p.cep} onChange={(v) => upd("cep", v)}
+              format={maskCEP} placeholder="00000-000" inputMode="numeric" />
           </Field>
           <Field label="Logradouro" className="md:col-span-2">
             <Input value={p.logradouro} onChange={(e) => upd("logradouro", e.target.value)} />
