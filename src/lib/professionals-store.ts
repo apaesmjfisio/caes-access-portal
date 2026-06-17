@@ -187,10 +187,12 @@ export const CORES_AGENDA = [
   { label: "Ciano",   value: "#06B6D4" },
 ];
 
-export const DIAS_SEMANA: { v: AvailabilityDay; l: string }[] = [
-  { v: "seg", l: "Segunda-feira" },
-  { v: "ter", l: "Terça-feira" },
-  { v: "qua", l: "Quarta-feira" },
-  { v: "qui", l: "Quinta-feira" },
-  { v: "sex", l: "Sexta-feira" },
+export const DIAS_SEMANA: { v: AvailabilityDay; l: string; short: string }[] = [
+  { v: "seg", l: "Segunda-feira", short: "Seg" },
+  { v: "ter", l: "Terça-feira",   short: "Ter" },
+  { v: "qua", l: "Quarta-feira",  short: "Qua" },
+  { v: "qui", l: "Quinta-feira",  short: "Qui" },
+  { v: "sex", l: "Sexta-feira",   short: "Sex" },
+  { v: "sab", l: "Sábado",        short: "Sáb" },
+  { v: "dom", l: "Domingo",       short: "Dom" },
 ];
