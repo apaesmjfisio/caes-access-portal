@@ -53,12 +53,14 @@ export type Professional = {
 
   // 3. Disponibilidade
   dias: AvailabilityDay[];
+  horarioMode: HorarioMode;
   horaEntrada: string;
   horaSaida: string;
   almocoIni: string;
   almocoFim: string;
   evolucaoIni: string;
   evolucaoFim: string;
+  horariosPorDia: Partial<Record<AvailabilityDay, HorarioDia>>;
 
   // 4. Configurações
   status: ProfessionalStatus;
