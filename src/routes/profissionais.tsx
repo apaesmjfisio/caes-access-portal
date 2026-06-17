@@ -26,6 +26,7 @@ import {
   isProfissaoRegulamentada, conselhoIdentType, listRegioes,
   CORES_AGENDA, DIAS_SEMANA,
   type Professional, type ProfessionalStatus, type AvailabilityDay,
+  type HorarioMode, type HorarioDia,
 } from "@/lib/professionals-store";
 
 export const Route = createFileRoute("/profissionais")({
