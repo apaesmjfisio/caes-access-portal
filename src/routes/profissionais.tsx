@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft, Save, Plus, Trash2, Upload, UserPlus, Search, Eye, Pencil,
-  Power, X, ImageIcon, FileSignature,
+  Power, X, ImageIcon, FileSignature, CalendarCheck, Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import {
   isProfissaoRegulamentada, conselhoIdentType, listRegioes,
   CORES_AGENDA, DIAS_SEMANA,
   type Professional, type ProfessionalStatus, type AvailabilityDay,
+  type HorarioMode, type HorarioDia,
 } from "@/lib/professionals-store";
 
 export const Route = createFileRoute("/profissionais")({
@@ -183,7 +184,7 @@ function ProfissionaisPage() {
                 <Button size="sm" variant="outline" onClick={() => { setEditing(null); setMode("list"); }}>
                   <X className="h-4 w-4" /> Cancelar
                 </Button>
-                <Button size="sm" onClick={save}>
+                <Button size="sm" onClick={save} className="bg-teal-600 text-white hover:bg-teal-700">
                   <Save className="h-4 w-4" /> Salvar
                 </Button>
               </>
@@ -463,45 +464,40 @@ function ProfessionalForm({
   function updReg<K extends keyof Professional["registroProf"]>(k: K, v: Professional["registroProf"][K]) {
     setP({ ...p, registroProf: { ...p.registroProf, [k]: v } });
   }
-
   function handleProfissaoChange(prof: string) {
     const conselho = PROFISSAO_TO_CONSELHO[prof] || "";
-    setP({
-      ...p,
-      profissao: prof,
-      registroProf: {
-        ...p.registroProf,
-        conselho,
-        ufConselho: "",
-        regiao: "",
-      },
-    });
+    setP({ ...p, profissao: prof, registroProf: { ...p.registroProf, conselho, ufConselho: "", regiao: "" } });
   }
-
   function toggleDia(d: AvailabilityDay, on: boolean) {
     const set = new Set(p.dias);
     if (on) set.add(d); else set.delete(d);
     setP({ ...p, dias: Array.from(set) });
   }
-
   function addRqe() { setP({ ...p, rqes: [...p.rqes, ""] }); }
   function updRqe(i: number, v: string) {
     setP({ ...p, rqes: p.rqes.map((x, idx) => (idx === i ? v.replace(/[^0-9A-Za-z/-]/g, "") : x)) });
   }
   function rmRqe(i: number) { setP({ ...p, rqes: p.rqes.filter((_, idx) => idx !== i) }); }
-
   function addAss() { setP({ ...p, associacoes: [...p.associacoes, { nome: "", numero: "" }] }); }
   function updAss(i: number, k: "nome" | "numero", v: string) {
     setP({ ...p, associacoes: p.associacoes.map((x, idx) => (idx === i ? { ...x, [k]: v } : x)) });
   }
   function rmAss(i: number) { setP({ ...p, associacoes: p.associacoes.filter((_, idx) => idx !== i) }); }
-
   function handleImg(field: "fotoDataUrl" | "assinaturaDataUrl", file?: File | null) {
     if (!file) return;
     if (!/\.(png|jpe?g)$/i.test(file.name)) { toast.error("Use PNG ou JPG."); return; }
     const r = new FileReader();
     r.onload = () => setP({ ...p, [field]: r.result as string });
     r.readAsDataURL(file);
+  }
+  function getDia(d: AvailabilityDay): HorarioDia {
+    return p.horariosPorDia[d] ?? {
+      entrada: p.horaEntrada, almocoIni: p.almocoIni, almocoFim: p.almocoFim,
+      saida: p.horaSaida, evolucaoIni: p.evolucaoIni, evolucaoFim: p.evolucaoFim,
+    };
+  }
+  function updDia(d: AvailabilityDay, patch: Partial<HorarioDia>) {
+    setP({ ...p, horariosPorDia: { ...p.horariosPorDia, [d]: { ...getDia(d), ...patch } } });
   }
 
   const identType = conselhoIdentType(p.registroProf.conselho);
@@ -510,97 +506,126 @@ function ProfessionalForm({
 
   return (
     <div className="space-y-5">
-      {/* DADOS PESSOAIS */}
-      <Section title="Dados Pessoais">
-        <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Nome Completo" required>
-            <Input value={p.nome} onChange={(e) => upd("nome", e.target.value)} />
-          </Field>
-          <Field label="CPF" required hint={!cpfValid ? "CPF inválido" : undefined} hintColor="rose">
-            <MaskedInput value={p.cpf} onChange={(v) => upd("cpf", v)}
-              format={maskCPF} placeholder="000.000.000-00" inputMode="numeric" />
-          </Field>
-        </div>
-        <div className="grid gap-4 md:grid-cols-4">
-          <Field label="RG"><Input value={p.rg} onChange={(e) => upd("rg", e.target.value)} /></Field>
-          <Field label="Data de Nascimento">
-            <Input type="date" value={p.dataNascimento}
-              onChange={(e) => upd("dataNascimento", e.target.value)} />
-          </Field>
-          <Field label="Sexo">
-            <Select value={p.sexo} onValueChange={(v) => upd("sexo", v)}>
-              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-              <SelectContent>
-                {SEXOS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Estado Civil">
-            <Select value={p.estadoCivil} onValueChange={(v) => upd("estadoCivil", v)}>
-              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-              <SelectContent>
-                {ESTADOS_CIVIS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </Field>
-        </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          <Field label="E-mail" required hint={!emailValid ? "E-mail inválido" : undefined} hintColor="rose">
-            <Input type="email" value={p.email} onChange={(e) => upd("email", e.target.value)} />
-          </Field>
-          <Field label="Telefone Celular" required>
-            <MaskedInput value={p.celular} onChange={(v) => upd("celular", v)}
-              format={maskTelefoneSmart} placeholder="(00) 00000-0000" inputMode="tel" />
-          </Field>
-          <Field label="Telefone Secundário">
-            <MaskedInput value={p.telefoneSecundario} onChange={(v) => upd("telefoneSecundario", v)}
-              format={maskTelefoneSmart} placeholder="(00) 00000-0000" inputMode="tel" />
-          </Field>
-        </div>
-        <div className="grid gap-4 md:grid-cols-4">
-          <Field label="CEP">
-            <MaskedInput value={p.cep} onChange={(v) => upd("cep", v)}
-              format={maskCEP} placeholder="00000-000" inputMode="numeric" />
-          </Field>
-          <Field label="Logradouro" className="md:col-span-2">
-            <Input value={p.logradouro} onChange={(e) => upd("logradouro", e.target.value)} />
-          </Field>
-          <Field label="Número">
-            <Input value={p.numeroEnd} onChange={(e) => upd("numeroEnd", e.target.value)} />
-          </Field>
-        </div>
-        <div className="grid gap-4 md:grid-cols-4">
-          <Field label="Bairro"><Input value={p.bairro} onChange={(e) => upd("bairro", e.target.value)} /></Field>
-          <Field label="Cidade"><Input value={p.cidade} onChange={(e) => upd("cidade", e.target.value)} /></Field>
-          <Field label="Estado">
-            <Select value={p.estado} onValueChange={(v) => upd("estado", v)}>
-              <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
-              <SelectContent>
-                {UFS.map((uf) => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Complemento">
-            <Input value={p.complemento} onChange={(e) => upd("complemento", e.target.value)} />
-          </Field>
-        </div>
-      </Section>
+      {/* TOPO: FOTO + DADOS PESSOAIS */}
+      <div className="grid gap-5 lg:grid-cols-[260px_minmax(0,1fr)]">
+        {/* Card Foto */}
+        <Card className="flex flex-col items-center gap-4 p-5">
+          <div className="text-sm font-semibold">Foto do Profissional</div>
+          <div className="grid h-44 w-44 place-items-center overflow-hidden rounded-full border bg-muted">
+            {p.fotoDataUrl
+              ? <img src={p.fotoDataUrl} alt="" className="h-full w-full object-cover" />
+              : <ImageIcon className="h-12 w-12 text-muted-foreground" />}
+          </div>
+          <label className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-teal-300 bg-teal-50/40 px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50">
+            <Upload className="h-4 w-4" /> Alterar Foto
+            <input type="file" accept="image/png,image/jpeg" className="hidden"
+              onChange={(e) => handleImg("fotoDataUrl", e.target.files?.[0])} />
+          </label>
+          <Button type="button" variant="outline" className="w-full border-rose-300 text-rose-600 hover:bg-rose-50"
+            onClick={() => upd("fotoDataUrl", "")}>
+            <Trash2 className="h-4 w-4" /> Remover
+          </Button>
+        </Card>
 
-      {/* DADOS PROFISSIONAIS */}
-      <Section title="Dados Profissionais">
-        <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Profissão" required>
-            <Select value={p.profissao} onValueChange={handleProfissaoChange}>
-              <SelectTrigger><SelectValue placeholder="Selecione a profissão" /></SelectTrigger>
-              <SelectContent>
-                {PROFISSOES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </Field>
-        </div>
+        {/* Dados Pessoais */}
+        <Section title="Dados Pessoais">
+          <div className="grid gap-4 md:grid-cols-6">
+            <Field label="Nome Completo" required className="md:col-span-2">
+              <Input value={p.nome} onChange={(e) => upd("nome", e.target.value)} />
+            </Field>
+            <Field label="CPF" required hint={!cpfValid ? "CPF inválido" : undefined} hintColor="rose">
+              <MaskedInput value={p.cpf} onChange={(v) => upd("cpf", v)}
+                format={maskCPF} placeholder="000.000.000-00" inputMode="numeric" />
+            </Field>
+            <Field label="RG">
+              <Input value={p.rg} onChange={(e) => upd("rg", e.target.value)} />
+            </Field>
+            <Field label="Data de Nascimento">
+              <Input type="date" value={p.dataNascimento}
+                onChange={(e) => upd("dataNascimento", e.target.value)} />
+            </Field>
+            <Field label="Estado Civil">
+              <Select value={p.estadoCivil} onValueChange={(v) => upd("estadoCivil", v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {ESTADOS_CIVIS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
 
-        {reg && (
-          <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50/40 p-4">
+          <div className="grid gap-4 md:grid-cols-4">
+            <Field label="Sexo">
+              <Select value={p.sexo} onValueChange={(v) => upd("sexo", v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {SEXOS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="E-mail" required hint={!emailValid ? "E-mail inválido" : undefined} hintColor="rose" className="md:col-span-2">
+              <Input type="email" value={p.email} onChange={(e) => upd("email", e.target.value)} />
+            </Field>
+            <Field label="Telefone Celular" required>
+              <MaskedInput value={p.celular} onChange={(v) => upd("celular", v)}
+                format={maskTelefoneSmart} placeholder="(00) 00000-0000" inputMode="tel" />
+            </Field>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-4">
+            <Field label="Telefone Secundário">
+              <MaskedInput value={p.telefoneSecundario} onChange={(v) => upd("telefoneSecundario", v)}
+                format={maskTelefoneSmart} placeholder="(00) 00000-0000" inputMode="tel" />
+            </Field>
+            <Field label="CEP">
+              <MaskedInput value={p.cep} onChange={(v) => upd("cep", v)}
+                format={maskCEP} placeholder="00000-000" inputMode="numeric" />
+            </Field>
+            <Field label="Logradouro" className="md:col-span-2">
+              <Input value={p.logradouro} onChange={(e) => upd("logradouro", e.target.value)} />
+            </Field>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-4">
+            <Field label="Número">
+              <Input value={p.numeroEnd} onChange={(e) => upd("numeroEnd", e.target.value)} />
+            </Field>
+            <Field label="Complemento">
+              <Input value={p.complemento} onChange={(e) => upd("complemento", e.target.value)} />
+            </Field>
+            <Field label="Bairro">
+              <Input value={p.bairro} onChange={(e) => upd("bairro", e.target.value)} />
+            </Field>
+            <Field label="Cidade">
+              <Input value={p.cidade} onChange={(e) => upd("cidade", e.target.value)} />
+            </Field>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-4">
+            <Field label="Estado">
+              <Select value={p.estado} onValueChange={(v) => upd("estado", v)}>
+                <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
+                <SelectContent>
+                  {UFS.map((uf) => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Profissão" required className="md:col-span-3">
+              <Select value={p.profissao} onValueChange={handleProfissaoChange}>
+                <SelectTrigger><SelectValue placeholder="Selecione a profissão" /></SelectTrigger>
+                <SelectContent>
+                  {PROFISSOES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+        </Section>
+      </div>
+
+      {/* DADOS PROFISSIONAIS (Registro / RQE / Associações) — só p/ regulamentada */}
+      {reg && (
+        <Section title="Dados Profissionais">
+          <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-4">
             <div className="mb-3 text-sm font-bold text-sky-700">Registro Profissional</div>
             <div className="grid gap-4 md:grid-cols-3">
               <Field label="Conselho">
@@ -608,8 +633,7 @@ function ProfessionalForm({
               </Field>
               {identType === "uf" && (
                 <Field label="UF do Conselho" required>
-                  <Select value={p.registroProf.ufConselho}
-                    onValueChange={(v) => updReg("ufConselho", v)}>
+                  <Select value={p.registroProf.ufConselho} onValueChange={(v) => updReg("ufConselho", v)}>
                     <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
                       {UFS.map((uf) => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)}
@@ -619,8 +643,7 @@ function ProfessionalForm({
               )}
               {identType === "regiao" && (
                 <Field label="Região do Conselho" required>
-                  <Select value={p.registroProf.regiao}
-                    onValueChange={(v) => updReg("regiao", v)}>
+                  <Select value={p.registroProf.regiao} onValueChange={(v) => updReg("regiao", v)}>
                     <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
                       {listRegioes(p.registroProf.conselho).map((r) =>
@@ -631,8 +654,7 @@ function ProfessionalForm({
               )}
               <Field label="Número do Registro" required>
                 <Input value={p.registroProf.numeroRegistro}
-                  onChange={(e) => updReg("numeroRegistro",
-                    e.target.value.replace(/[^0-9A-Za-z/-]/g, ""))}
+                  onChange={(e) => updReg("numeroRegistro", e.target.value.replace(/[^0-9A-Za-z/-]/g, ""))}
                   placeholder="Ex.: 123456/SP-PA" />
               </Field>
             </div>
@@ -641,16 +663,14 @@ function ProfessionalForm({
               <div className="mb-1 text-xs font-bold uppercase text-muted-foreground">
                 RQE (Registro de Qualificação de Especialista)
               </div>
-              {p.rqes.length === 0 && (
-                <p className="mb-2 text-xs text-muted-foreground">Nenhum RQE cadastrado.</p>
-              )}
+              {p.rqes.length === 0 && <p className="mb-2 text-xs text-muted-foreground">Nenhum RQE cadastrado.</p>}
               <div className="space-y-2">
                 {p.rqes.map((r, i) => (
                   <div key={i} className="flex items-center gap-2">
-                    <Input value={r} placeholder="Nº RQE"
-                      onChange={(e) => updRqe(i, e.target.value)} />
-                    <Button size="icon" variant="ghost" className="text-destructive"
-                      onClick={() => rmRqe(i)}><Trash2 className="h-4 w-4" /></Button>
+                    <Input value={r} placeholder="Nº RQE" onChange={(e) => updRqe(i, e.target.value)} />
+                    <Button size="icon" variant="ghost" className="text-destructive" onClick={() => rmRqe(i)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -660,12 +680,8 @@ function ProfessionalForm({
             </div>
 
             <div className="mt-4">
-              <div className="mb-1 text-xs font-bold uppercase text-muted-foreground">
-                Associações / Sociedades
-              </div>
-              {p.associacoes.length === 0 && (
-                <p className="mb-2 text-xs text-muted-foreground">Nenhuma associação cadastrada.</p>
-              )}
+              <div className="mb-1 text-xs font-bold uppercase text-muted-foreground">Associações / Sociedades</div>
+              {p.associacoes.length === 0 && <p className="mb-2 text-xs text-muted-foreground">Nenhuma associação cadastrada.</p>}
               <div className="space-y-2">
                 {p.associacoes.map((a, i) => (
                   <div key={i} className="grid grid-cols-[1fr_180px_auto] items-center gap-2">
@@ -673,8 +689,9 @@ function ProfessionalForm({
                       onChange={(e) => updAss(i, "nome", e.target.value)} />
                     <Input value={a.numero} placeholder="Nº de Registro"
                       onChange={(e) => updAss(i, "numero", e.target.value)} />
-                    <Button size="icon" variant="ghost" className="text-destructive"
-                      onClick={() => rmAss(i)}><Trash2 className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" className="text-destructive" onClick={() => rmAss(i)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -683,119 +700,215 @@ function ProfessionalForm({
               </Button>
             </div>
           </div>
-        )}
-      </Section>
+        </Section>
+      )}
 
-      {/* DISPONIBILIDADE */}
-      <Section title="Disponibilidade de Atendimento">
-        <div>
-          <Label className="text-xs font-bold uppercase text-muted-foreground">Dias de Atendimento</Label>
-          <div className="mt-2 flex flex-wrap gap-3">
-            {DIAS_SEMANA.map((d) => (
-              <label key={d.v} className="flex items-center gap-2 text-sm">
-                <Checkbox checked={p.dias.includes(d.v)}
-                  onCheckedChange={(v) => toggleDia(d.v, Boolean(v))} />
-                {d.l}
-              </label>
-            ))}
+      {/* CONFIGURAÇÕES + ASSINATURA */}
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <Section title="Configurações Adicionais">
+          <div className="grid gap-4 md:grid-cols-[180px_220px_minmax(0,1fr)_220px]">
+            <Field label="Status">
+              <Select value={p.status} onValueChange={(v) => upd("status", v as ProfessionalStatus)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Ativo">Ativo</SelectItem>
+                  <SelectItem value="Inativo">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Cor da Agenda">
+              <Select value={p.corAgenda} onValueChange={(v) => upd("corAgenda", v)}>
+                <SelectTrigger>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block h-4 w-4 rounded" style={{ background: p.corAgenda }} />
+                    <span className="font-mono text-xs">{p.corAgenda.toUpperCase()}</span>
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {CORES_AGENDA.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>
+                      <span className="inline-flex items-center gap-2">
+                        <span className="inline-block h-3 w-3 rounded" style={{ background: c.value }} />
+                        {c.label} · <span className="font-mono text-xs">{c.value}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Cores Rápidas">
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {CORES_AGENDA.map((c) => (
+                  <button key={c.value} type="button" title={c.label}
+                    onClick={() => upd("corAgenda", c.value)}
+                    className={`grid h-8 w-8 place-items-center rounded-full border-2 transition ${p.corAgenda === c.value ? "border-foreground" : "border-transparent"}`}
+                    style={{ background: c.value }}>
+                    {p.corAgenda === c.value && <span className="text-xs font-bold text-white">✓</span>}
+                  </button>
+                ))}
+              </div>
+            </Field>
+            <Field label="Cor Personalizada (Hex)" hint="Use o formato #RRGGBB">
+              <div className="flex items-center gap-2">
+                <Input value={p.corAgenda} onChange={(e) => upd("corAgenda", e.target.value)}
+                  placeholder="#000000" className="font-mono" />
+                <input type="color" value={/^#[0-9a-fA-F]{6}$/.test(p.corAgenda) ? p.corAgenda : "#000000"}
+                  onChange={(e) => upd("corAgenda", e.target.value.toUpperCase())}
+                  className="h-9 w-10 cursor-pointer rounded border" />
+              </div>
+            </Field>
           </div>
-        </div>
-        <div className="grid gap-4 md:grid-cols-4">
-          <Field label="Horário Entrada">
-            <Input type="time" value={p.horaEntrada}
-              onChange={(e) => upd("horaEntrada", e.target.value)} />
-          </Field>
-          <Field label="Horário Saída">
-            <Input type="time" value={p.horaSaida}
-              onChange={(e) => upd("horaSaida", e.target.value)} />
-          </Field>
-          <Field label="Almoço Início">
-            <Input type="time" value={p.almocoIni}
-              onChange={(e) => upd("almocoIni", e.target.value)} />
-          </Field>
-          <Field label="Almoço Fim">
-            <Input type="time" value={p.almocoFim}
-              onChange={(e) => upd("almocoFim", e.target.value)} />
-          </Field>
-        </div>
-        <div className="grid gap-4 md:grid-cols-4">
-          <Field label="Evolução Início">
-            <Input type="time" value={p.evolucaoIni}
-              onChange={(e) => upd("evolucaoIni", e.target.value)} />
-          </Field>
-          <Field label="Evolução Fim">
-            <Input type="time" value={p.evolucaoFim}
-              onChange={(e) => upd("evolucaoFim", e.target.value)} />
-          </Field>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          A agenda bloqueará automaticamente os horários de almoço e evolução e impedirá conflitos.
-        </p>
-      </Section>
+        </Section>
 
-      {/* CONFIGURAÇÕES */}
-      <Section title="Configurações Adicionais">
-        <div className="grid gap-4 md:grid-cols-3">
-          <Field label="Status">
-            <Select value={p.status} onValueChange={(v) => upd("status", v as ProfessionalStatus)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Ativo">Ativo</SelectItem>
-                <SelectItem value="Inativo">Inativo</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Cor da Agenda">
-            <div className="flex flex-wrap items-center gap-2">
-              {CORES_AGENDA.map((c) => (
-                <button key={c.value} type="button"
-                  title={c.label}
-                  onClick={() => upd("corAgenda", c.value)}
-                  className={`h-7 w-7 rounded-full border-2 ${p.corAgenda === c.value ? "border-foreground" : "border-transparent"}`}
-                  style={{ background: c.value }}
-                />
+        <Section title="Assinatura Digital">
+          <div className="flex flex-col items-center gap-3">
+            {p.assinaturaDataUrl ? (
+              <img src={p.assinaturaDataUrl} alt="" className="h-20 w-full rounded-md border bg-white object-contain p-1" />
+            ) : (
+              <div className="grid h-20 w-full place-items-center rounded-md border bg-muted text-muted-foreground">
+                <FileSignature className="h-6 w-6" />
+              </div>
+            )}
+            <label className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-teal-300 bg-teal-50/40 px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50">
+              <Upload className="h-4 w-4" /> Carregar (JPG/PNG)
+              <input type="file" accept="image/png,image/jpeg" className="hidden"
+                onChange={(e) => handleImg("assinaturaDataUrl", e.target.files?.[0])} />
+            </label>
+            <p className="text-[11px] text-muted-foreground">Tamanho recomendado: 300x100px</p>
+          </div>
+        </Section>
+      </div>
+
+      {/* DISPONIBILIDADE DE ATENDIMENTO */}
+      <Card className="p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-2">
+          <h3 className="text-base font-bold text-muted-foreground">Disponibilidade de Atendimento</h3>
+          <Button size="sm" className="bg-teal-600 text-white hover:bg-teal-700"
+            onClick={() => toast.success("Dias de atendimento salvos.")}>
+            <CalendarCheck className="h-4 w-4" /> Salvar Dias de Atendimento
+          </Button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <div className="mb-2 text-sm font-semibold">Configuração</div>
+            <div className="flex flex-wrap items-center gap-6 text-sm">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="hmode" checked={p.horarioMode === "igual"}
+                  onChange={() => upd("horarioMode", "igual" as HorarioMode)}
+                  className="h-4 w-4 accent-teal-600" />
+                Horário igual para todos os dias
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="hmode" checked={p.horarioMode === "diferente"}
+                  onChange={() => upd("horarioMode", "diferente" as HorarioMode)}
+                  className="h-4 w-4 accent-teal-600" />
+                Horário diferente por dia da semana
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs font-bold uppercase text-muted-foreground">Dias de Atendimento</Label>
+            <div className="mt-2 flex flex-wrap gap-3">
+              {DIAS_SEMANA.map((d) => (
+                <label key={d.v} className="flex items-center gap-2 text-sm">
+                  <Checkbox checked={p.dias.includes(d.v)}
+                    onCheckedChange={(v) => toggleDia(d.v, Boolean(v))} />
+                  {d.l}
+                </label>
               ))}
             </div>
-          </Field>
-        </div>
+          </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <Label className="text-xs font-bold uppercase text-muted-foreground">Foto do Profissional</Label>
-            <div className="mt-2 flex items-center gap-3">
-              {p.fotoDataUrl ? (
-                <img src={p.fotoDataUrl} alt="" className="h-16 w-16 rounded-md object-cover" />
-              ) : (
-                <div className="grid h-16 w-16 place-items-center rounded-md bg-muted text-muted-foreground">
-                  <ImageIcon className="h-6 w-6" />
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            {/* Padrão / Por dia */}
+            {p.horarioMode === "igual" ? (
+              <div className="rounded-lg border border-border bg-card p-4">
+                <div className="mb-3 text-sm font-semibold">Padrão para todos os dias</div>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <Field label="Início Entrada">
+                    <Input type="time" value={p.horaEntrada} onChange={(e) => upd("horaEntrada", e.target.value)} />
+                  </Field>
+                  <Field label="Início Almoço">
+                    <Input type="time" value={p.almocoIni} onChange={(e) => upd("almocoIni", e.target.value)} />
+                  </Field>
+                  <Field label="Fim Almoço">
+                    <Input type="time" value={p.almocoFim} onChange={(e) => upd("almocoFim", e.target.value)} />
+                  </Field>
+                  <Field label="Fim Expediente">
+                    <Input type="time" value={p.horaSaida} onChange={(e) => upd("horaSaida", e.target.value)} />
+                  </Field>
+                  <Field label="Início Evolução">
+                    <Input type="time" value={p.evolucaoIni} onChange={(e) => upd("evolucaoIni", e.target.value)} />
+                  </Field>
+                  <Field label="Fim Evolução">
+                    <Input type="time" value={p.evolucaoFim} onChange={(e) => upd("evolucaoFim", e.target.value)} />
+                  </Field>
                 </div>
-              )}
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm hover:bg-accent">
-                <Upload className="h-4 w-4" /> Carregar (JPG/PNG)
-                <input type="file" accept="image/png,image/jpeg" className="hidden"
-                  onChange={(e) => handleImg("fotoDataUrl", e.target.files?.[0])} />
-              </label>
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <Button size="sm" className="bg-teal-600 text-white hover:bg-teal-700"
+                    onClick={() => toast.success("Horários salvos.")}>
+                    <Clock className="h-4 w-4" /> Salvar Horários
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    Os horários serão aplicados para todos os dias da semana.
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-border bg-card p-4">
+                <div className="mb-3 text-sm font-semibold">Horários por dia</div>
+                <div className="space-y-3">
+                  {DIAS_SEMANA.filter(d => p.dias.includes(d.v)).map((d) => {
+                    const h = getDia(d.v);
+                    return (
+                      <div key={d.v} className="rounded-md border border-border p-3">
+                        <div className="mb-2 text-xs font-bold uppercase text-muted-foreground">{d.l}</div>
+                        <div className="grid gap-2 md:grid-cols-3">
+                          <Input type="time" value={h.entrada} onChange={(e) => updDia(d.v, { entrada: e.target.value })} />
+                          <Input type="time" value={h.almocoIni} onChange={(e) => updDia(d.v, { almocoIni: e.target.value })} />
+                          <Input type="time" value={h.almocoFim} onChange={(e) => updDia(d.v, { almocoFim: e.target.value })} />
+                          <Input type="time" value={h.saida} onChange={(e) => updDia(d.v, { saida: e.target.value })} />
+                          <Input type="time" value={h.evolucaoIni} onChange={(e) => updDia(d.v, { evolucaoIni: e.target.value })} />
+                          <Input type="time" value={h.evolucaoFim} onChange={(e) => updDia(d.v, { evolucaoFim: e.target.value })} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {p.dias.length === 0 && (
+                    <p className="text-xs text-muted-foreground">Selecione os dias de atendimento acima.</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Visualização da Semana */}
+            <div className="rounded-lg border border-border bg-card p-4">
+              <div className="mb-3 text-sm font-semibold">Visualização da Semana</div>
+              <div className="grid grid-cols-7 gap-2">
+                {DIAS_SEMANA.map((d) => {
+                  const ativo = p.dias.includes(d.v);
+                  const h = p.horarioMode === "diferente" && p.horariosPorDia[d.v]
+                    ? p.horariosPorDia[d.v]!
+                    : { entrada: p.horaEntrada, saida: p.horaSaida, almocoIni: p.almocoIni, almocoFim: p.almocoFim, evolucaoIni: p.evolucaoIni, evolucaoFim: p.evolucaoFim };
+                  return (
+                    <div key={d.v} className={`rounded-md border p-2 text-center text-[11px] ${ativo ? "bg-teal-50 border-teal-300" : "bg-muted/40 text-muted-foreground"}`}>
+                      <div className="mb-1 text-xs font-bold">{d.short}</div>
+                      <div className="font-mono">{h.entrada} – {h.saida}</div>
+                      <div className="font-mono text-muted-foreground">{h.almocoIni} – {h.almocoFim}</div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
-          <div>
-            <Label className="text-xs font-bold uppercase text-muted-foreground">Assinatura Digital</Label>
-            <div className="mt-2 flex items-center gap-3">
-              {p.assinaturaDataUrl ? (
-                <img src={p.assinaturaDataUrl} alt="" className="h-16 w-32 rounded-md border bg-white object-contain p-1" />
-              ) : (
-                <div className="grid h-16 w-32 place-items-center rounded-md bg-muted text-muted-foreground">
-                  <FileSignature className="h-6 w-6" />
-                </div>
-              )}
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm hover:bg-accent">
-                <Upload className="h-4 w-4" /> Carregar (JPG/PNG)
-                <input type="file" accept="image/png,image/jpeg" className="hidden"
-                  onChange={(e) => handleImg("assinaturaDataUrl", e.target.files?.[0])} />
-              </label>
-            </div>
-          </div>
+
+          <p className="text-xs text-muted-foreground">
+            A agenda bloqueará automaticamente os horários de almoço e evolução e impedirá conflitos.
+          </p>
         </div>
-      </Section>
+      </Card>
     </div>
   );
 }
