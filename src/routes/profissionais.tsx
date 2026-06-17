@@ -181,9 +181,6 @@ function ProfissionaisPage() {
             )}
             {mode === "form" && (
               <>
-                <Button size="sm" variant="ghost" onClick={() => { setEditing(null); setMode("list"); }}>
-                  <ArrowLeft className="h-4 w-4" /> Voltar
-                </Button>
                 <Button size="sm" variant="outline" onClick={() => { setEditing(null); setMode("list"); }}>
                   <X className="h-4 w-4" /> Cancelar
                 </Button>
