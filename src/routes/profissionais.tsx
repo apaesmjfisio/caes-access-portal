@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft, Save, Plus, Trash2, Upload, UserPlus, Search, Eye, Pencil,
-  Power, X, ImageIcon, FileSignature,
+  Power, X, ImageIcon, FileSignature, CalendarCheck, Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
