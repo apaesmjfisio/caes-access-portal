@@ -1,7 +1,13 @@
 // Profissionais (colaboradores) — armazenamento local por usuário.
 // Schema reformulado conforme PROFISSIONAIS E CIDS.txt.
 
-export type AvailabilityDay = "seg" | "ter" | "qua" | "qui" | "sex";
+export type AvailabilityDay = "seg" | "ter" | "qua" | "qui" | "sex" | "sab" | "dom";
+
+export type HorarioMode = "igual" | "diferente";
+export type HorarioDia = {
+  entrada: string; almocoIni: string; almocoFim: string;
+  saida: string; evolucaoIni: string; evolucaoFim: string;
+};
 
 export type RegistroProfissional = {
   conselho: string;          // ex.: CRM, CRESS
